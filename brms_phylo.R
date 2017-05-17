@@ -1,5 +1,6 @@
 library(ape)
 library(MCMCglmm)
+library(brms)
 
 # uncomment and set your path to the folder where you stored the data
 my_path <- "./"
@@ -11,7 +12,6 @@ inv.phylo <- MCMCglmm::inverseA(phylo, nodes = "TIPS", scale = TRUE)
 A <- solve(inv.phylo$Ainv)
 rownames(A) <- rownames(inv.phylo$Ainv)
 
-library(brms)
 model_simple <- brm(phen ~ cofactor + (1|phylo), data = data_simple, 
                     family = gaussian(), cov_ranef = list(phylo = A),
                     prior = c(prior(normal(0, 10), "b"),
