@@ -1,17 +1,10 @@
 functions {
-  /* turn a vector into a vetor[] of defined dimension
-   *   X: a vector
-   *   N: first dimension of the desired matrix
-   *   K: second dimension of the desired matrix
-   * Returns:
-   *   a vector[] of dimension N x K
-   */
-  vector[] as_matrix(vector X, int N, int K) {
-    vector[K] Y[N];
-    for (n in 1:N) {
-      Y[n] = to_vector(X[((n - 1) * K + 1):(n * K)]);
+  matrix as_matrix(vector X, int N, int K) { 
+    matrix[N, K] Y; 
+    for (i in 1:N) {
+      Y[i] = to_row_vector(X[((i - 1) * K + 1):(i * K)]); 
     }
-    return Y;
+    return Y; 
   }
   matrix kronecker(matrix A, matrix B) {
     matrix[rows(A)*rows(B), cols(A)*cols(B)] kron;
@@ -32,12 +25,6 @@ data {
   int          Z[N]; // Random effect design matrix
   matrix[N, N]    A; // cholesky factor of known covariance matrix
 }
-
-transformed data{
-    vector[N*K] zeros;
-    zeros = rep_vector(0.0, N*K);
-}
-
 parameters {
   matrix[K,J] beta; // fixed effects
   vector[N*K]    a; // breeding values
@@ -52,7 +39,7 @@ parameters {
 
 }
 transformed parameters {
-  vector[K] aM[N];
+  matrix[N, K] aM;
   aM = as_matrix(kronecker(A, diag_pre_multiply(L_sigma_G, L_Omega_G)) * a, N, K);
 }
 model {
@@ -62,7 +49,7 @@ model {
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     for(n in 1:N)
-      mu[n] = beta * X[n] + aM[Z[n]];
+      mu[n] = beta * X[n] + to_vector(aM[Z[n]]);
 
     Y ~ multi_normal_cholesky(mu, L_Sigma_R);
 

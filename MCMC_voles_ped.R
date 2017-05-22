@@ -52,7 +52,7 @@ model_simple <- brm(value ~ trait + trait:sex + trait:forage + (trait|animal) + 
                               prior(normal(0, 10), "Intercept"),
                               prior(student_t(3, 0, 20), "sd"),
                               prior(student_t(3, 0, 20), "sigma")),
-                    iter = 1000, chains = 4, control = list(adapt_delta = 0.95))
+                    iter = 1, chains = 1, control = list(adapt_delta = 0.95))
 summary(model_simple)
 stancode(model_simple)
 

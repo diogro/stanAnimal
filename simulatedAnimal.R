@@ -19,7 +19,6 @@ ped <- read.table("volesPED.txt",header=T)
 G <- matrix(c(1, 0.7, 0.7, 2), 2, 2)
 E <- matrix(c(1, 0.2, 0.2, 2), 2, 2)
 a = rbv(ped, G)
-?rbv
 
 beta = matrix(c(1, 2,
                 0.1, 0.2,
@@ -65,7 +64,8 @@ stan_data = list(K = ncol(Y),
                  Y = Y,
                  Z = pos,
                  A = as.matrix(chol(A)))
-stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, iter = 2000,
+stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, 
+                  iter = 400,
                   control = list(adapt_delta = 0.95))
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "G")[[1]]
