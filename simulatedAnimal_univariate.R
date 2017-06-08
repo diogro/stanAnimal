@@ -20,11 +20,12 @@ set.seed(3)
 # Pedigree
 ped <- read.table("https://raw.githubusercontent.com/diogro/QGcourse/master/tutorials/volesPED.txt",header=T)
 
+h2 <- .4
+P = 1
 # Genetic variance
-G <- 1.
-
+G = h2 * P
 # Residual variance
-E <- 2.
+E = (1 - h2) * P
 
 # Create relationship matrix
 inv.phylo <- MCMCglmm::inverseA(ped, scale = TRUE)

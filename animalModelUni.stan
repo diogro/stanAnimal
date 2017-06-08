@@ -10,7 +10,7 @@ transformed data{
   LA = cholesky_decompose(A);
 }
 parameters {
-  vector[N]  a; // breeding values
+  vector[N]  a_tilde; // breeding values
   row_vector[J] beta; // fixed effects
 
 # Genetic variance
@@ -21,20 +21,20 @@ parameters {
 }
 model {
     vector[N] mu;
-    vector[N] aM;
+    vector[N] a;
     
-    a ~ normal(0, 1);
-    aM = sqrt(sigma_G) * (LA * a);
+    a_tilde ~ normal(0, 1);
+    a = sqrt(sigma_G) * (LA * a_tilde);
  
     for(n in 1:N)
-      mu[n] = beta * X[n] + aM[n];
+      mu[n] = beta * X[n] + a[n];
 
     Y ~ normal(mu, sigma_R);
 
     to_vector(beta) ~ normal(0, 1);
     
-    sigma_G ~ normal(0, 2);
-    sigma_R ~ normal(0, 1);
+    sigma_G ~ cauchy(0, 5);
+    sigma_R ~ cauchy(0, 5);
 }
 generated quantities{
   real sigma_E;
