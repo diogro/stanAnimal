@@ -1,4 +1,4 @@
-list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedantics","pedigreemm", "brms", "tidyr", "rstan")
+list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedantics","pedigreemm", "rstan", "mvtnorm", "bayesplot", "shinystan")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 
@@ -7,23 +7,31 @@ library(MCMCglmm)
 library(lme4)
 library(lmerTest)
 library(pedigreemm)
-library(plyr)
-library(tidyr)
-library(brms)
-library(mvtnorm)
 library(rstan)
+library(mvtnorm)
+library(bayesplot)
+library(shinystan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = 10)
 
 ped <- read.table("volesPED.txt",header=T)
-G <- matrix(c(1, 0.7, 0.7, 2), 2, 2)
-E <- matrix(c(1.5, 0.2, 0.2, 3), 2, 2)
+corrG <- matrix(c(1, 0.7, 0.2,
+              0.7, 1, 0.0,
+              0.2, 0,   1), 3, 3, byrow = T)
+corrE <- matrix(c(  1, 0.2, 0.2,
+              0.2,   1, 0.7,
+              0.2,  0.7,  1), 3, 3, byrow = T)
+varG = 1:3
+varE = 2*varG
+G = sqrt(varG) %*% t(sqrt(varG)) * corrG
+E = sqrt(varE) %*% t(sqrt(varE)) * corrE
+varG / (varG + varE)
 a = rbv(ped, G)
 
-beta = matrix(c(1, 2,
-                0.1, 0.2,
-                0.05, 0.1), 3, 2, byrow = TRUE)
-colnames(beta) = c("x", "y")
+beta = matrix(c(1, 2, 3, 
+                0.1, 0.2, 0.5,
+                0.05, 0.1, 0.3), 3, 3, byrow = TRUE)
+colnames(beta) = c("x", "y", "z")
 rownames(beta) = c("Intercept", "sex", "Z")
 
 sex = numeric(nrow(a))
@@ -38,15 +46,15 @@ e = rmvnorm(nrow(a), sigma = E)
 
 Y = X %*% beta + a + e
 
-colnames(Y) = c("x", "y")
+colnames(Y) = c("x", "y", "z")
 
 sim_data = data.frame(Y, X, animal = rownames(a))
 
-prior_bi <- list(G = list(G1 = list(V = diag(2), n = 1.002)),
-                          R = list(V = diag(2), n = 1.002))
-model_bi <- MCMCglmm(cbind(x, y) ~ trait + trait:sex + trait:Z,
+prior_bi <- list(G = list(G1 = list(V = diag(3), n = 1.002)),
+                          R = list(V = diag(3), n = 1.002))
+model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      random = ~us(trait):animal,
-                     rcov = ~us(trait):units, family = c("gaussian", "gaussian"),
+                     rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
                      pedigree = ped, data = sim_data, prior = prior_bi,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
 summary(model_bi)
@@ -71,7 +79,19 @@ rstan::plot(stan_model, pars = "beta")
 rstan::traceplot(stan_model, pars = "G")
 rstan::traceplot(stan_model, pars = "E")
 colMeans(model$G)
-colMeans(model$aM)
+plot(colMeans(model$a), a)
 colMeans(model$E)
 colMeans(model$beta)
 t(beta)
+mcmc_intervals( 
+  as.array(stan_model),  
+  pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean")
+mcmc_intervals( 
+  as.array(stan_model),  
+  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean")

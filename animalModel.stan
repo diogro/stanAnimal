@@ -11,7 +11,7 @@ functions {
     new_a = rep_vector(0, num_elements(a));
     for(iA in 1:cols(LA)){
       for(jA in 1:iA){
-        if(LA[iA, jA] > 10e-10){
+        if(LA[iA, jA] > 1e-10){
           for(iG in 1:cols(LG)){
             for(jG in 1:iG){
               new_a[(cols(LG)*(iA-1))+iG] = new_a[(cols(LG)*(iA-1))+iG] + LA[iA, jA] * LG[iG, jG] * a[(cols(LG)*(jA-1))+jG];
