@@ -6,14 +6,21 @@ functions {
     }
     return Y; 
   }
-  matrix kronecker(matrix A, matrix B) {
-    matrix[rows(A)*rows(B), cols(A)*cols(B)] kron;
-    for (i in 1:cols(A)) {
-      for (j in 1:rows(A)) {
-        kron[((j-1)*rows(B)+1):(j*rows(B)), ((i-1)*cols(B)+1):(i*cols(B))] = A[j,i] * B;
+  vector chol_kronecker_product(matrix LA, matrix LG, vector a) {
+    vector[num_elements(a)] new_a;
+    new_a = rep_vector(0, num_elements(a));
+    for(iA in 1:cols(LA)){
+      for(jA in 1:iA){
+        if(LA[iA, jA] > 10e-10){
+          for(iG in 1:cols(LG)){
+            for(jG in 1:iG){
+              new_a[(cols(LG)*(iA-1))+iG] = new_a[(cols(LG)*(iA-1))+iG] + LA[iA, jA] * LG[iG, jG] * a[(cols(LG)*(jA-1))+jG];
+            }
+          }
+        }
       }
     }
-    return kron;
+    return new_a;
   }
 }
 data {
@@ -22,12 +29,15 @@ data {
   int<lower=0>    N; // number of individuals
   vector[J]    X[N]; // Fixed effects design matrix
   vector[K]    Y[N]; // response variable
-  int          Z[N]; // Random effect design matrix
-  matrix[N, N]    A; // cholesky factor of known covariance matrix
+  matrix[N, N]    A; // known covariance matrix
+}
+transformed data{
+  matrix[N, N] LA;
+  LA = cholesky_decompose(A);
 }
 parameters {
-  matrix[K,J] beta; // fixed effects
-  vector[N*K]    a; // breeding values
+  matrix[K,J]    beta; // fixed effects
+  vector[N*K] a_tilde; // breeding values
 
 # G matrix
   cholesky_factor_corr[K] L_Omega_G;
@@ -39,31 +49,31 @@ parameters {
 
 }
 transformed parameters {
-  matrix[N, K] aM;
-  aM = as_matrix(kronecker(A, diag_pre_multiply(L_sigma_G, L_Omega_G)) * a, N, K);
+  matrix[N, K] a;
+  a = as_matrix(chol_kronecker_product(LA, diag_pre_multiply(L_sigma_G, L_Omega_G), a_tilde), N, K);
 }
 model {
     vector[K] mu[N];
-    matrix[K,K] L_Sigma_R;
+    matrix[K, K] L_Sigma_R;
 
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     for(n in 1:N)
-      mu[n] = beta * X[n] + to_vector(aM[Z[n]]);
+      mu[n] = beta * X[n] + to_vector(a[n]);
 
     Y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     to_vector(beta) ~ normal(0, 1);
-    a ~ normal(0, 1);
+    a_tilde   ~ normal(0, 1);
     L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
     L_Omega_R ~ lkj_corr_cholesky(4);
     L_sigma_R ~ cauchy(0, 2.5);
 }
 generated quantities {
-    matrix[K, K] P;
-    matrix[K, K] G;
-    matrix[K, K] E;
+    cov_matrix[K] P;
+    cov_matrix[K] G;
+    cov_matrix[K] E;
     corr_matrix[K] corrG;
     corr_matrix[K] corrE;
 

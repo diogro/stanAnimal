@@ -20,7 +20,7 @@ set.seed(3)
 # Pedigree
 ped <- read.table("https://raw.githubusercontent.com/diogro/QGcourse/master/tutorials/volesPED.txt",header=T)
 
-h2 <- .4
+h2 <- .6
 P = 1
 # Genetic variance
 G = h2 * P
@@ -71,8 +71,8 @@ stan_data = list(J = ncol(X),
                  X = X,
                  Y = as.numeric(Y),
                  A = as.matrix(A))
-stan_model = stan(file = "./animalModelUni.stan", data = stan_data, iter = 2000, control = list(adapt_delta = 0.99))
-rstan::summary(stan_model, pars = c("sigma_G", "sigma_E"))[[1]]
+stan_model = stan(file = "./animalModelUni.stan", data = stan_data, iter = 3000, warmup = 2000, chains = 8, control = list(adapt_delta = 0.99))
+rstan::summary(stan_model, pars = c("sigma_G", "sigma_E", "lp__"))[[1]]
 model = rstan::extract(stan_model, permuted = FALSE, pars = c("sigma_G", "sigma_R"))
 model_list = vector("list", 2)
 names(model_list) = c("sigma_G", "sigma_R")
@@ -90,3 +90,5 @@ mcmc_intervals(
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
   point_est = "mean")
+mcmc_trace(as.array(stan_model),  
+  pars = c("sigma_G", "sigma_E"))

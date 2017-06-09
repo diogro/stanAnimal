@@ -17,7 +17,7 @@ options(mc.cores = 10)
 
 ped <- read.table("volesPED.txt",header=T)
 G <- matrix(c(1, 0.7, 0.7, 2), 2, 2)
-E <- matrix(c(1, 0.2, 0.2, 2), 2, 2)
+E <- matrix(c(1.5, 0.2, 0.2, 3), 2, 2)
 a = rbv(ped, G)
 
 beta = matrix(c(1, 2,
@@ -55,18 +55,16 @@ inv.phylo <- MCMCglmm::inverseA(ped, scale = TRUE)
 A <- solve(inv.phylo$Ainv)
 A = (A + t(A))/2
 rownames(A) <- rownames(inv.phylo$Ainv)
-pos = laply(sim_data$animal, function(x) which(x == rownames(a)))
 
 stan_data = list(K = ncol(Y),
                  J = ncol(X),
                  N = nrow(Y),
                  X = X,
                  Y = Y,
-                 Z = pos,
-                 A = as.matrix(chol(A)))
+                 A = as.matrix(A))
 stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, 
-                  iter = 400,
-                  control = list(adapt_delta = 0.95))
+                  iter = 2000,
+                  control = list(adapt_delta = 0.99))
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "G")[[1]]
 rstan::plot(stan_model, pars = "beta")
