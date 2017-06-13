@@ -33,7 +33,17 @@ data {
 }
 transformed data{
   matrix[N, N] LA;
+  vector[K] y_sd;
+  vector[K] y_mean;
+  vector[K] Y_std[N]; // response variable
   LA = cholesky_decompose(A);
+  
+  for(k in 1:K){
+    y_sd[k] = sd(Y[,k]);
+    y_mean[k] = mean(Y[,k]);
+    for(n in 1:N)
+      Y_std[n,k] = (Y[n,k] - y_mean[k]) / y_sd[k];
+  }
 }
 parameters {
   matrix[K,J]    beta; // fixed effects
@@ -61,7 +71,7 @@ model {
     for(n in 1:N)
       mu[n] = beta * X[n] + to_vector(a[n]);
 
-    Y ~ multi_normal_cholesky(mu, L_Sigma_R);
+    Y_std ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     to_vector(beta) ~ normal(0, 1);
     a_tilde   ~ normal(0, 1);
@@ -71,14 +81,19 @@ model {
     L_sigma_R ~ cauchy(0, 2.5);
 }
 generated quantities {
+    vector[K] sigma_G;
+    vector[K] sigma_R;
     cov_matrix[K] P;
     cov_matrix[K] G;
     cov_matrix[K] E;
     corr_matrix[K] corrG;
     corr_matrix[K] corrE;
+  
+    sigma_G = y_sd .* L_sigma_G;
+    sigma_R = y_sd .* L_sigma_R;
 
-    G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
-    E = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));
+    G = multiply_lower_tri_self_transpose(diag_pre_multiply(sigma_G, L_Omega_G));
+    E = multiply_lower_tri_self_transpose(diag_pre_multiply(sigma_R, L_Omega_R));
     P = G + E;
 
     corrG = multiply_lower_tri_self_transpose(L_Omega_G);
