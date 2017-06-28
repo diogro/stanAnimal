@@ -22,10 +22,8 @@ formula = paste0("cbind(",
 stan_data = generateAnimalModelInput(formula, ratonesdf,
                                      ratones_ped$A,
                                      line = "all")
-stan_data$Y = stan_data$Y 
-apply(stan_data$Y, 2, sd)
 stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 1, 
-                  iter = 200,
+                  iter = 800,
                   control = list(adapt_delta = 0.99))
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "G")[[1]]

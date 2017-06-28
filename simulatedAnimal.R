@@ -16,11 +16,11 @@ options(mc.cores = 10)
 
 ped <- read.table("volesPED.txt",header=T)
 corrG <- matrix(c(1, 0.7, 0.2,
-              0.7, 1, 0.0,
-              0.2, 0,   1), 3, 3, byrow = T)
-corrE <- matrix(c(  1, 0.2, 0.2,
-              0.2,   1, 0.7,
-              0.2,  0.7,  1), 3, 3, byrow = T)
+                  0.7, 1, 0.0,
+                  0.2, 0,   1), 3, 3, byrow = T)
+corrE <- matrix(c(  1, 0.2, 0.0,
+                  0.2,   1, 0.0,
+                  0.0, 0.0,  1), 3, 3, byrow = T)
 varG = 1:3
 varE = 2*varG
 G = sqrt(varG) %*% t(sqrt(varG)) * corrG
@@ -58,6 +58,7 @@ model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      pedigree = ped, data = sim_data, prior = prior_bi,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
 summary(model_bi)
+colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
 
 inv.phylo <- MCMCglmm::inverseA(ped, scale = TRUE)
 A <- solve(inv.phylo$Ainv)
@@ -71,7 +72,7 @@ stan_data = list(K = ncol(Y),
                  Y = Y,
                  A = as.matrix(A))
 stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, 
-                  iter = 2000,
+                  iter = 800,
                   control = list(adapt_delta = 0.99))
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "G")[[1]]
@@ -88,10 +89,20 @@ mcmc_intervals(
   pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
-  point_est = "mean")
+  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.animal", 
+                                                                         "traity:traity.animal", 
+                                                                         "traitz:traitz.animal")]))
+mcmc_intervals( 
+  as.array(stan_model),  
+  pars = c("E[1,1]", "E[2,2]", "E[3,3]"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.units", 
+                                                                         "traity:traity.units", 
+                                                                         "traitz:traitz.units")]))
 mcmc_intervals( 
   as.array(stan_model),  
   pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
-  point_est = "mean")
+  point_est = "mean") + geom_vline(xintercept = corrG[lower.tri(corrG)])

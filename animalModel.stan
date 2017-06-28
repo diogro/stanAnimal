@@ -34,12 +34,13 @@ data {
 transformed data{
   matrix[N, N] LA;
   vector[K] y_sd;
+  vector[K] y_var;
   vector[K] y_mean;
   vector[K] Y_std[N]; // response variable
   LA = cholesky_decompose(A);
   
   for(k in 1:K){
-    y_sd[k] = sd(Y[,k]);
+    y_sd[k] = sd(Y[,k])/2;
     y_mean[k] = mean(Y[,k]);
     for(n in 1:N)
       Y_std[n,k] = (Y[n,k] - y_mean[k]) / y_sd[k];
