@@ -65,15 +65,13 @@ mod_animalREML<-pedigreemm(Y ~ sex + (1|ID), pedigree=list(ID=ped2),
                            control = lmerControl(check.nobs.vs.nlev="ignore",
                                                  check.nobs.vs.nRE="ignore"))
 summary(mod_animalREML)
-#launch_shinystan(stan_model)
-stan_data = list(J = ncol(X),
-                 N = nrow(Y),
-                 X = X,
-                 Y = as.numeric(Y),
-                 A = as.matrix(A))
-stan_model = stan(file = "./animalModelUni.stan", data = stan_data, iter = 3000, warmup = 2000, chains = 8, control = list(adapt_delta = 0.99))
+
+library(stanAnimal)
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
+
 rstan::summary(stan_model, pars = c("sigma_G", "sigma_E", "lp__"))[[1]]
 model = rstan::extract(stan_model, permuted = FALSE, pars = c("sigma_G", "sigma_R"))
+model = rstan::extract(stan_model, permuted = FALSE, pars = c("sigma_G", "sigma_R", "sex"))
 model_list = vector("list", 2)
 names(model_list) = c("sigma_G", "sigma_R")
 model_list$sigma_G = matrix(model[,,"sigma_G"], ncol = 1)

@@ -13,10 +13,10 @@ parameters {
   vector[N]  a_tilde; // breeding values
   row_vector[J] beta; // fixed effects
 
-# Genetic variance
+// Genetic variance
   real<lower=0> sigma_G;
 
-# Residual variance
+// Residual variance
   real<lower=0> sigma_R;
 }
 model {
@@ -33,8 +33,8 @@ model {
 
     to_vector(beta) ~ normal(0, 1);
     
-    sigma_G ~ cauchy(0, 5);
-    sigma_R ~ cauchy(0, 5);
+    sigma_G ~ normal(0, 1);
+    sigma_R ~ normal(0, 1);
 }
 generated quantities{
   real sigma_E;

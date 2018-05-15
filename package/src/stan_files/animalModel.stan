@@ -50,11 +50,11 @@ parameters {
   matrix[K,J]    beta; // fixed effects
   vector[N*K] a_tilde; // breeding values
 
-# G matrix
+// G matrix
   cholesky_factor_corr[K] L_Omega_G;
   vector<lower=0>[K] L_sigma_G;
 
-# R matrix
+// R matrix
   cholesky_factor_corr[K] L_Omega_R;
   vector<lower=0>[K] L_sigma_R;
 
@@ -77,9 +77,9 @@ model {
     to_vector(beta) ~ normal(0, 1);
     a_tilde   ~ normal(0, 1);
     L_Omega_G ~ lkj_corr_cholesky(4);
-    L_sigma_G ~ cauchy(0, 2.5);
+    L_sigma_G ~ normal(0, 1);
     L_Omega_R ~ lkj_corr_cholesky(4);
-    L_sigma_R ~ cauchy(0, 2.5);
+    L_sigma_R ~ normal(0, 1);
 }
 generated quantities {
     vector[K] sigma_G;
