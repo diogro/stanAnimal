@@ -67,8 +67,8 @@ mod_animalREML<-pedigreemm(Y ~ sex + (1|ID), pedigree=list(ID=ped2),
 summary(mod_animalREML)
 
 library(stanAnimal)
-stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
-
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 4000, warmup = 1000)
+print(stan_model, digits = 4)
 rstan::summary(stan_model, pars = c("sigma_G", "sigma_E", "lp__"))[[1]]
 model = rstan::extract(stan_model, permuted = FALSE, pars = c("sigma_G", "sigma_R"))
 model = rstan::extract(stan_model, permuted = FALSE, pars = c("sigma_G", "sigma_R", "sex"))

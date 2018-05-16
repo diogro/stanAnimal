@@ -1,8 +1,8 @@
 Package: stanAnimal
-Version: 0.0.0.9000
-Title: What the Package Does (One Line, Title Case)
-Description: What the package does (one paragraph).
-Authors@R: person("First", "Last", , "first.last@example.com", c("aut", "cre"))
+Version: 0.0.1
+Title: Stan Animal model
+Description: Fit linear animal model for one or more traits.
+Authors@R: person("Diogo", "Melo", , "diogro@gmail.com", c("aut", "cre"))
 License: GPL (>=3)
 Encoding: UTF-8
 LazyData: true
