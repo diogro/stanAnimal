@@ -53,6 +53,7 @@ private:
     vector<double> Y;
     matrix_d A;
     matrix_d LA;
+    double sigma;
 public:
     model_animalModelUni(stan::io::var_context& context__,
         std::ostream* pstream__ = 0)
@@ -157,26 +158,32 @@ public:
             validate_non_negative_index("LA", "N", N);
             LA = matrix_d(static_cast<Eigen::VectorXd::Index>(N),static_cast<Eigen::VectorXd::Index>(N));
             stan::math::fill(LA,DUMMY_VAR__);
-
             current_statement_begin__ = 10;
+            sigma = double(0);
+            stan::math::fill(sigma,DUMMY_VAR__);
+
+            current_statement_begin__ = 11;
             stan::math::assign(LA, cholesky_decompose(A));
+            current_statement_begin__ = 12;
+            stan::math::assign(sigma, (sd(Y) * sd(Y)));
 
             // validate transformed data
             current_statement_begin__ = 9;
+            current_statement_begin__ = 10;
+            check_greater_or_equal(function__,"sigma",sigma,0);
 
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 13;
+            current_statement_begin__ = 15;
             validate_non_negative_index("a_tilde", "N", N);
             num_params_r__ += N;
-            current_statement_begin__ = 14;
+            current_statement_begin__ = 16;
         validate_non_negative_index("beta", "J", J);
             num_params_r__ += J;
             current_statement_begin__ = 17;
-            ++num_params_r__;
-            current_statement_begin__ = 20;
-            ++num_params_r__;
+            validate_non_negative_index("part", "2", 2);
+            num_params_r__ += (2 - 1);
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -227,30 +234,19 @@ public:
             throw std::runtime_error(std::string("Error transforming variable beta: ") + e.what());
         }
 
-        if (!(context__.contains_r("sigma_G")))
-            throw std::runtime_error("variable sigma_G missing");
-        vals_r__ = context__.vals_r("sigma_G");
+        if (!(context__.contains_r("part")))
+            throw std::runtime_error("variable part missing");
+        vals_r__ = context__.vals_r("part");
         pos__ = 0U;
-        context__.validate_dims("initialization", "sigma_G", "double", context__.to_vec());
-        double sigma_G(0);
-        sigma_G = vals_r__[pos__++];
+        validate_non_negative_index("part", "2", 2);
+        context__.validate_dims("initialization", "part", "vector_d", context__.to_vec(2));
+        vector_d part(static_cast<Eigen::VectorXd::Index>(2));
+        for (int j1__ = 0U; j1__ < 2; ++j1__)
+            part(j1__) = vals_r__[pos__++];
         try {
-            writer__.scalar_lb_unconstrain(0,sigma_G);
+            writer__.simplex_unconstrain(part);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable sigma_G: ") + e.what());
-        }
-
-        if (!(context__.contains_r("sigma_R")))
-            throw std::runtime_error("variable sigma_R missing");
-        vals_r__ = context__.vals_r("sigma_R");
-        pos__ = 0U;
-        context__.validate_dims("initialization", "sigma_R", "double", context__.to_vec());
-        double sigma_R(0);
-        sigma_R = vals_r__[pos__++];
-        try {
-            writer__.scalar_lb_unconstrain(0,sigma_R);
-        } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable sigma_R: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable part: ") + e.what());
         }
 
         params_r__ = writer__.data_r();
@@ -298,19 +294,12 @@ public:
             else
                 beta = in__.row_vector_constrain(J);
 
-            T__ sigma_G;
-            (void) sigma_G;  // dummy to suppress unused var warning
+            Eigen::Matrix<T__,Eigen::Dynamic,1>  part;
+            (void) part;  // dummy to suppress unused var warning
             if (jacobian__)
-                sigma_G = in__.scalar_lb_constrain(0,lp__);
+                part = in__.simplex_constrain(2,lp__);
             else
-                sigma_G = in__.scalar_lb_constrain(0);
-
-            T__ sigma_R;
-            (void) sigma_R;  // dummy to suppress unused var warning
-            if (jacobian__)
-                sigma_R = in__.scalar_lb_constrain(0,lp__);
-            else
-                sigma_R = in__.scalar_lb_constrain(0);
+                part = in__.simplex_constrain(2);
 
 
             // transformed parameters
@@ -324,14 +313,14 @@ public:
 
             // model body
             {
-            current_statement_begin__ = 23;
+            current_statement_begin__ = 24;
             validate_non_negative_index("mu", "N", N);
             Eigen::Matrix<T__,Eigen::Dynamic,1>  mu(static_cast<Eigen::VectorXd::Index>(N));
             (void) mu;  // dummy to suppress unused var warning
 
             stan::math::initialize(mu, DUMMY_VAR__);
             stan::math::fill(mu,DUMMY_VAR__);
-            current_statement_begin__ = 24;
+            current_statement_begin__ = 25;
             validate_non_negative_index("a", "N", N);
             Eigen::Matrix<T__,Eigen::Dynamic,1>  a(static_cast<Eigen::VectorXd::Index>(N));
             (void) a;  // dummy to suppress unused var warning
@@ -340,23 +329,19 @@ public:
             stan::math::fill(a,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 26;
-            lp_accum__.add(normal_log<propto__>(a_tilde, 0, 1));
             current_statement_begin__ = 27;
-            stan::math::assign(a, multiply(sqrt(sigma_G),multiply(LA,a_tilde)));
-            current_statement_begin__ = 29;
+            lp_accum__.add(normal_log<propto__>(a_tilde, 0, 1));
+            current_statement_begin__ = 28;
+            stan::math::assign(a, multiply(sqrt((sigma * get_base1(part,1,"part",1))),multiply(LA,a_tilde)));
+            current_statement_begin__ = 30;
             for (int n = 1; n <= N; ++n) {
-                current_statement_begin__ = 30;
+                current_statement_begin__ = 31;
                 stan::math::assign(get_base1_lhs(mu,n,"mu",1), (multiply(beta,get_base1(X,n,"X",1)) + get_base1(a,n,"a",1)));
             }
-            current_statement_begin__ = 32;
-            lp_accum__.add(normal_log<propto__>(Y, mu, sigma_R));
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 33;
+            lp_accum__.add(normal_log<propto__>(Y, mu, sqrt((sigma * get_base1(part,2,"part",1)))));
+            current_statement_begin__ = 35;
             lp_accum__.add(normal_log<propto__>(to_vector(beta), 0, 1));
-            current_statement_begin__ = 36;
-            lp_accum__.add(normal_log<propto__>(sigma_G, 0, 1));
-            current_statement_begin__ = 37;
-            lp_accum__.add(normal_log<propto__>(sigma_R, 0, 1));
             }
 
         } catch (const std::exception& e) {
@@ -386,9 +371,9 @@ public:
         names__.resize(0);
         names__.push_back("a_tilde");
         names__.push_back("beta");
-        names__.push_back("sigma_G");
-        names__.push_back("sigma_R");
+        names__.push_back("part");
         names__.push_back("sigma_E");
+        names__.push_back("sigma_G");
     }
 
 
@@ -402,6 +387,7 @@ public:
         dims__.push_back(J);
         dimss__.push_back(dims__);
         dims__.resize(0);
+        dims__.push_back(2);
         dimss__.push_back(dims__);
         dims__.resize(0);
         dimss__.push_back(dims__);
@@ -424,16 +410,16 @@ public:
         // read-transform, write parameters
         vector_d a_tilde = in__.vector_constrain(N);
         row_vector_d beta = in__.row_vector_constrain(J);
-        double sigma_G = in__.scalar_lb_constrain(0);
-        double sigma_R = in__.scalar_lb_constrain(0);
+        vector_d part = in__.simplex_constrain(2);
             for (int k_0__ = 0; k_0__ < N; ++k_0__) {
             vars__.push_back(a_tilde[k_0__]);
             }
             for (int k_0__ = 0; k_0__ < J; ++k_0__) {
             vars__.push_back(beta[k_0__]);
             }
-        vars__.push_back(sigma_G);
-        vars__.push_back(sigma_R);
+            for (int k_0__ = 0; k_0__ < 2; ++k_0__) {
+            vars__.push_back(part[k_0__]);
+            }
 
         if (!include_tparams__) return;
         // declare and define transformed parameters
@@ -454,22 +440,32 @@ public:
 
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 40;
+            current_statement_begin__ = 38;
             double sigma_E(0.0);
             (void) sigma_E;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma_E, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(sigma_E,DUMMY_VAR__);
+            current_statement_begin__ = 39;
+            double sigma_G(0.0);
+            (void) sigma_G;  // dummy to suppress unused var warning
+
+            stan::math::initialize(sigma_G, std::numeric_limits<double>::quiet_NaN());
+            stan::math::fill(sigma_G,DUMMY_VAR__);
 
 
+            current_statement_begin__ = 40;
+            stan::math::assign(sigma_E, (sigma * get_base1(part,2,"part",1)));
             current_statement_begin__ = 41;
-            stan::math::assign(sigma_E, (sigma_R * sigma_R));
+            stan::math::assign(sigma_G, (sigma * get_base1(part,1,"part",1)));
 
             // validate generated quantities
-            current_statement_begin__ = 40;
+            current_statement_begin__ = 38;
+            current_statement_begin__ = 39;
 
             // write generated quantities
         vars__.push_back(sigma_E);
+        vars__.push_back(sigma_G);
 
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -515,18 +511,20 @@ public:
             param_name_stream__ << "beta" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "sigma_G";
-        param_names__.push_back(param_name_stream__.str());
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "sigma_R";
-        param_names__.push_back(param_name_stream__.str());
+        for (int k_0__ = 1; k_0__ <= 2; ++k_0__) {
+            param_name_stream__.str(std::string());
+            param_name_stream__ << "part" << '.' << k_0__;
+            param_names__.push_back(param_name_stream__.str());
+        }
 
         if (!include_gqs__ && !include_tparams__) return;
 
         if (!include_gqs__) return;
         param_name_stream__.str(std::string());
         param_name_stream__ << "sigma_E";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma_G";
         param_names__.push_back(param_name_stream__.str());
     }
 
@@ -545,18 +543,20 @@ public:
             param_name_stream__ << "beta" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "sigma_G";
-        param_names__.push_back(param_name_stream__.str());
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "sigma_R";
-        param_names__.push_back(param_name_stream__.str());
+        for (int k_0__ = 1; k_0__ <= (2 - 1); ++k_0__) {
+            param_name_stream__.str(std::string());
+            param_name_stream__ << "part" << '.' << k_0__;
+            param_names__.push_back(param_name_stream__.str());
+        }
 
         if (!include_gqs__ && !include_tparams__) return;
 
         if (!include_gqs__) return;
         param_name_stream__.str(std::string());
         param_name_stream__ << "sigma_E";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma_G";
         param_names__.push_back(param_name_stream__.str());
     }
 
