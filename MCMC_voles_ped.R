@@ -52,7 +52,7 @@ model_simple <- brm(value ~ trait + trait:sex + trait:forage + (trait|animal) + 
                               prior(normal(0, 10), "Intercept"),
                               prior(student_t(3, 0, 20), "sd"),
                               prior(student_t(3, 0, 20), "sigma")),
-                    iter = 1, chains = 1, control = list(adapt_delta = 0.95))
+                    iter = 1, chains = 1, control = list(adapt_delta = 0.999))
 summary(model_simple)
 stancode(model_simple)
 
@@ -65,6 +65,8 @@ pos = aaply(as.numeric(voles_scaled$ID), 1, function(x) which(x == rownames(A)))
 
 lm_model = lm(cbind(aggression, size) ~ sex + forage, data = voles_scaled)
 X = model.matrix(lm_model)
+Y = lm_model$model$`cbind(aggression, size)`
+lmm_animal(Y, X, A)
 
 stan_data = list(K = 2,
                  J = ncol(X),
@@ -74,6 +76,6 @@ stan_data = list(K = 2,
                  Z = pos,
                  A = as.matrix(chol(A)))
 
-stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, iter = 1000)
+stan_model = stan(file = "package/src/stan_files/animalModel.stan", data = stan_data, chains = 4, iter = 1000)
 model = rstan::extract(stan_model)
 colMeans(model$G)
