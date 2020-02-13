@@ -51,13 +51,25 @@ pos = aaply(as.numeric(voles_scaled$ID), 1, function(x) which(x == rownames(A)))
 lm_model = lm(cbind(aggression, size) ~ sex + forage, data = voles_scaled)
 X = model.matrix(lm_model)
 Y = lm_model$model$`cbind(aggression, size)`
-lmm_animal(Y, X, A)
 
 library(stanAnimal)
-stan_model = lmm_animal(voles_scaled[,c("aggression", "size")], X, A)
+cov_fit = lmm_multiCov(Y, X)
+model = rstan::extract(cov_fit)
+colMeans(model$P)
 
-stan_model = stan(file = "package/src/stan_files/animalModel.stan", data = stan_data, chains = 4, iter = 1000)
-model = rstan::extract(stan_model)
+animal_fit = lmm_animal(Y, X, A)
+
+model = rstan::extract(animal_fit)
 colMeans(model$G)
-print(stan_model, pars = c("G","E", "beta"))
+print(animal_fit, pars = c("G","E", "beta"))
 
+devtools::install_github("diogro/ratones")
+library(ratones)
+
+data("ratones")
+Y = sqrt(10)*as.matrix(dplyr::select(ratonesdf, IS_PM:NSL_NA))
+X = model.matrix(lm(IS_PM ~ SEX + LIN, data = ratonesdf))
+cov_fit = lmm_multiCov(Y, X)              
+model = rstan::extract(cov_fit)
+colMeans(model$P)
+cov(residuals(lm(Y~X +0)))
