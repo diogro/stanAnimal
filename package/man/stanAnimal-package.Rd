@@ -3,11 +3,11 @@
 \docType{package}
 \name{stanAnimal-package}
 \alias{stanAnimal-package}
-\alias{stanAnimal}
+\alias{package2}
 \title{The 'stanAnimal' package.}
 \description{
 A DESCRIPTION OF THE PACKAGE
 }
 \references{
-Stan Development Team (2018). RStan: the R interface to Stan. R package version 2.17.3. http://mc-stan.org
+Stan Development Team (2020). RStan: the R interface to Stan. R package version 2.19.3. https://mc-stan.org
 }

@@ -38,14 +38,14 @@ before_install:
 script: 
   - |
     travis_wait 42 R CMD build .
-    travis_wait 59 R CMD check stanAnimal*tar.gz
+    travis_wait 59 R CMD check package2*tar.gz
 
 after_script:
-  - tar -ztvf stanAnimal_*.tar.gz
+  - tar -ztvf package2_*.tar.gz
   - echo ${NOT_CRAN}
 
 after_success:
   - travis_wait 40 tar -C .. -xf $PKG_TARBALL
 
 after_failure:
-  - cat stanAnimal.Rcheck/00*
+- cat package2.Rcheck/00*
