@@ -22,7 +22,7 @@ transformed data{
   }
 }
 parameters {
-  matrix[K,J]    beta; // fixed effects
+  matrix[K,J] beta; // fixed effects
 
 // R matrix
   cholesky_factor_corr[K] L_Omega_R;

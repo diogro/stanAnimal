@@ -4,16 +4,8 @@
 \alias{lmm_animal}
 \title{Fit linear mixed animal model}
 \usage{
-lmm_animal(
-  Y,
-  X,
-  A,
-  iter = 3000,
-  warmup = 2000,
-  chains = 4,
-  control = list(adapt_delta = 0.99),
-  ...
-)
+lmm_animal(Y, X, A, iter = 3000, warmup = 2000, chains = 4,
+  control = list(adapt_delta = 0.99), ...)
 }
 \arguments{
 \item{Y}{response variable, univariate or multivariate}

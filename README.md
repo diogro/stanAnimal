@@ -1,6 +1,7 @@
 # Stan animal model
 
-Animal model implementation in Stan
+Animal model implementation in Stan.
+
 Very experimental, univariate works better.
 
 # Install
