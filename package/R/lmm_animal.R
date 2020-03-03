@@ -11,7 +11,7 @@
 #' @param ... additional parameters for stan sampling
 #' @author Diogo Melo
 #' @export
-lmm_animal = function(Y, X, A, iter = 3000, warmup = 2000, 
+lmm_animal = function(Y, X, A, iter = 3000, warmup = floor(iter/2), 
                       chains = 4, control = list(adapt_delta = 0.99), ...){
   p = ncol(Y)
   if(is.null(p)) p = 1

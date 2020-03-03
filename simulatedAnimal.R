@@ -14,6 +14,8 @@ library(shinystan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = 10)
 
+library(stanAnimal)
+
 ped <- read.table("volesPED.txt",header=T)
 corrG <- matrix(c(1, 0.7, 0.2,
                   0.7, 1, 0.0,
@@ -21,7 +23,7 @@ corrG <- matrix(c(1, 0.7, 0.2,
 corrE <- matrix(c(  1, 0.2, 0.0,
                   0.2,   1, 0.0,
                   0.0, 0.0,  1), 3, 3, byrow = T)
-varG = 1:3
+varG = 1:3*10
 varE = 2*varG
 G = sqrt(varG) %*% t(sqrt(varG)) * corrG
 E = sqrt(varE) %*% t(sqrt(varE)) * corrE
@@ -62,18 +64,11 @@ colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz
 
 inv.phylo <- MCMCglmm::inverseA(ped, scale = TRUE)
 A <- solve(inv.phylo$Ainv)
-A = (A + t(A))/2
+A = as.matrix((A + t(A))/2)
 rownames(A) <- rownames(inv.phylo$Ainv)
 
-stan_data = list(K = ncol(Y),
-                 J = ncol(X),
-                 N = nrow(Y),
-                 X = X,
-                 Y = Y,
-                 A = as.matrix(A))
-stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 4, 
-                  iter = 800,
-                  control = list(adapt_delta = 0.99))
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
+
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "G")[[1]]
 rstan::plot(stan_model, pars = "beta")
@@ -102,7 +97,7 @@ mcmc_intervals(
                                                                          "traitz:traitz.units")]))
 mcmc_intervals( 
   as.array(stan_model),  
-  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
+  pars = c("G[1,2]", "G[1,3]", "G[2,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = corrG[lower.tri(corrG)])
+  point_est = "mean") + geom_vline(xintercept = G[lower.tri(corrG)])
