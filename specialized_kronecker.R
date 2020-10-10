@@ -33,5 +33,11 @@ kroneker_product <- function(LA, LG, a){
   return(new_a)
 }
 
-microbenchmark(asw = (kronecker(LA, LG) %*% a)[,1],new_a = kroneker_product(LA, LG, a))
+asw = matrix((kronecker(LA, LG) %*% a)[,1], 14, 2, byrow = T)
+new_a = matrix(kroneker_product(LA, LG, a), 14, 2, byrow = T)
+fst_a = matrix(LA %*% matrix(a, 14, 2, byrow = T) %*% t(LG), 14, 2)
+microbenchmark(asw = matrix((kronecker(LA, LG) %*% a)[,1], 14, 2, byrow = T),
+               new_a = matrix(kroneker_product(LA, LG, a), 14, 2, byrow = T),
+               fst_a = LA %*% matrix(a, 14, 2, byrow = T) %*% t(LG))
 all.equal(asw, new_a)
+all.equal(asw, fst_a)
