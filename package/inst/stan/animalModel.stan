@@ -1,28 +1,3 @@
-functions {
-  matrix as_matrix(vector X, int N, int K) { 
-    matrix[N, K] Y; 
-    for (i in 1:N) {
-      Y[i] = to_row_vector(X[((i - 1) * K + 1):(i * K)]); 
-    }
-    return Y; 
-  }
-  vector chol_kronecker_product(matrix LA, matrix LG, vector a) {
-    vector[num_elements(a)] new_a;
-    new_a = rep_vector(0, num_elements(a));
-    for(iA in 1:cols(LA)){
-      for(jA in 1:iA){
-        if(LA[iA, jA] > 1e-10){
-          for(iG in 1:cols(LG)){
-            for(jG in 1:iG){
-              new_a[(cols(LG)*(iA-1))+iG] = new_a[(cols(LG)*(iA-1))+iG] + LA[iA, jA] * LG[iG, jG] * a[(cols(LG)*(jA-1))+jG];
-            }
-          }
-        }
-      }
-    }
-    return new_a;
-  }
-}
 data {
   int<lower=1>    K; // number of traits
   int<lower=1>    J; // number of fixed effects
@@ -47,8 +22,8 @@ transformed data{
   }
 }
 parameters {
-  matrix[K,J]    beta; // fixed effects
-  vector[N*K] a_tilde; // breeding values
+  matrix[K, J]    beta; // fixed effects
+  matrix[N, K] a_tilde; // breeding values precursor
 
 // G matrix
   cholesky_factor_corr[K] L_Omega_G;
@@ -61,7 +36,7 @@ parameters {
 }
 transformed parameters {
   matrix[N, K] a;
-  a = as_matrix(chol_kronecker_product(LA, diag_pre_multiply(L_sigma_G, L_Omega_G), a_tilde), N, K);
+  a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; # a ~ N(0, A x G)
 }
 model {
     vector[K] mu[N];
@@ -75,7 +50,7 @@ model {
     Y_std ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     to_vector(beta) ~ normal(0, 1);
-    a_tilde   ~ normal(0, 1);
+    to_vector(a_tilde) ~ normal(0, 1);
     L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ normal(0, 1);
     L_Omega_R ~ lkj_corr_cholesky(4);

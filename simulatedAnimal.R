@@ -15,8 +15,14 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = 10)
 
 library(stanAnimal)
+library(AtchleyMice)
 
 ped <- read.table("volesPED.txt",header=T)
+ped <- mice_pedigree
+F6_ID = mice_info$F6$ID
+A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
+L_A = chol(A)
+
 corrG <- matrix(c(1, 0.7, 0.2,
                   0.7, 1, 0.0,
                   0.2, 0,   1), 3, 3, byrow = T)
@@ -28,7 +34,10 @@ varE = 2*varG
 G = sqrt(varG) %*% t(sqrt(varG)) * corrG
 E = sqrt(varE) %*% t(sqrt(varE)) * corrE
 varG / (varG + varE)
-a = rbv(ped, G)
+n = nrow(mice_info$F6)
+p = nrow(G)
+a = t(L_A) %*% matrix(rnorm(n*p), n, p) %*% chol(G)
+
 
 beta = matrix(c(1, 2, 3, 
                 0.1, 0.2, 0.5,
@@ -36,10 +45,8 @@ beta = matrix(c(1, 2, 3,
 colnames(beta) = c("x", "y", "z")
 rownames(beta) = c("Intercept", "sex", "Z")
 
-sex = numeric(nrow(a))
-sex = sample(c(0, 1), length(sex), replace = TRUE)
-sex[rownames(a) %in% ped$SIRE] <- 1
-sex[rownames(a) %in% ped$DAM] <- 0
+sex = as.numeric(as.factor(mice_info$F6$Sex))-1
+
 Z = rnorm(nrow(a))
 Intercept = rep(1, nrow(a))
 X = cbind(Intercept, sex, Z)
@@ -59,13 +66,9 @@ model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
                      pedigree = ped, data = sim_data, prior = prior_bi,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
-summary(model_bi)
+summary(model_bi) 
 colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
 
-inv.phylo <- MCMCglmm::inverseA(ped, scale = TRUE)
-A <- solve(inv.phylo$Ainv)
-A = as.matrix((A + t(A))/2)
-rownames(A) <- rownames(inv.phylo$Ainv)
 
 stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
 
