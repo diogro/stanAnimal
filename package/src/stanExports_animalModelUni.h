@@ -33,7 +33,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_animalModelUni");
-    reader.add_event(44, 42, "end", "model_animalModelUni");
+    reader.add_event(46, 44, "end", "model_animalModelUni");
     return reader;
 }
 #include <stan_meta_header.hpp>
@@ -157,8 +157,7 @@ public:
             validate_non_negative_index("beta", "J", J);
             num_params_r__ += J;
             current_statement_begin__ = 17;
-            validate_non_negative_index("part", "2", 2);
-            num_params_r__ += (2 - 1);
+            num_params_r__ += 1;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -211,21 +210,17 @@ public:
             stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable beta: ") + e.what()), current_statement_begin__, prog_reader__());
         }
         current_statement_begin__ = 17;
-        if (!(context__.contains_r("part")))
-            stan::lang::rethrow_located(std::runtime_error(std::string("Variable part missing")), current_statement_begin__, prog_reader__());
-        vals_r__ = context__.vals_r("part");
+        if (!(context__.contains_r("h2")))
+            stan::lang::rethrow_located(std::runtime_error(std::string("Variable h2 missing")), current_statement_begin__, prog_reader__());
+        vals_r__ = context__.vals_r("h2");
         pos__ = 0U;
-        validate_non_negative_index("part", "2", 2);
-        context__.validate_dims("parameter initialization", "part", "vector_d", context__.to_vec(2));
-        Eigen::Matrix<double, Eigen::Dynamic, 1> part(2);
-        size_t part_j_1_max__ = 2;
-        for (size_t j_1__ = 0; j_1__ < part_j_1_max__; ++j_1__) {
-            part(j_1__) = vals_r__[pos__++];
-        }
+        context__.validate_dims("parameter initialization", "h2", "double", context__.to_vec());
+        double h2(0);
+        h2 = vals_r__[pos__++];
         try {
-            writer__.simplex_unconstrain(part);
+            writer__.scalar_lub_unconstrain(0, 1, h2);
         } catch (const std::exception& e) {
-            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable part: ") + e.what()), current_statement_begin__, prog_reader__());
+            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable h2: ") + e.what()), current_statement_begin__, prog_reader__());
         }
         params_r__ = writer__.data_r();
         params_i__ = writer__.data_i();
@@ -267,12 +262,12 @@ public:
             else
                 beta = in__.row_vector_constrain(J);
             current_statement_begin__ = 17;
-            Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, 1> part;
-            (void) part;  // dummy to suppress unused var warning
+            local_scalar_t__ h2;
+            (void) h2;  // dummy to suppress unused var warning
             if (jacobian__)
-                part = in__.simplex_constrain(2, lp__);
+                h2 = in__.scalar_lub_constrain(0, 1, lp__);
             else
-                part = in__.simplex_constrain(2);
+                h2 = in__.scalar_lub_constrain(0, 1);
             // model body
             {
             current_statement_begin__ = 24;
@@ -288,7 +283,7 @@ public:
             current_statement_begin__ = 27;
             lp_accum__.add(normal_log<propto__>(a_tilde, 0, 1));
             current_statement_begin__ = 28;
-            stan::math::assign(a, multiply(stan::math::sqrt((sigma * get_base1(part, 1, "part", 1))), multiply(LA, a_tilde)));
+            stan::math::assign(a, multiply(stan::math::sqrt((sigma * h2)), multiply(LA, a_tilde)));
             current_statement_begin__ = 30;
             for (int n = 1; n <= N; ++n) {
                 current_statement_begin__ = 31;
@@ -298,9 +293,11 @@ public:
                             "assigning variable mu");
             }
             current_statement_begin__ = 33;
-            lp_accum__.add(normal_log<propto__>(Y, mu, stan::math::sqrt((sigma * get_base1(part, 2, "part", 1)))));
+            lp_accum__.add(normal_log<propto__>(Y, mu, stan::math::sqrt((sigma * (1 - h2)))));
             current_statement_begin__ = 35;
             lp_accum__.add(normal_log<propto__>(to_vector(beta), 0, 1));
+            current_statement_begin__ = 36;
+            lp_accum__.add(beta_log<propto__>(h2, 2, 4));
             }
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -324,7 +321,7 @@ public:
         names__.resize(0);
         names__.push_back("a_tilde");
         names__.push_back("beta");
-        names__.push_back("part");
+        names__.push_back("h2");
         names__.push_back("sigma_E");
         names__.push_back("sigma_G");
     }
@@ -338,7 +335,6 @@ public:
         dims__.push_back(J);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(2);
         dimss__.push_back(dims__);
         dims__.resize(0);
         dimss__.push_back(dims__);
@@ -369,11 +365,8 @@ public:
         for (size_t j_1__ = 0; j_1__ < beta_j_1_max__; ++j_1__) {
             vars__.push_back(beta(j_1__));
         }
-        Eigen::Matrix<double, Eigen::Dynamic, 1> part = in__.simplex_constrain(2);
-        size_t part_j_1_max__ = 2;
-        for (size_t j_1__ = 0; j_1__ < part_j_1_max__; ++j_1__) {
-            vars__.push_back(part(j_1__));
-        }
+        double h2 = in__.scalar_lub_constrain(0, 1);
+        vars__.push_back(h2);
         double lp__ = 0.0;
         (void) lp__;  // dummy to suppress unused var warning
         stan::math::accumulator<double> lp_accum__;
@@ -384,25 +377,25 @@ public:
             if (!include_gqs__ && !include_tparams__) return;
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 38;
+            current_statement_begin__ = 40;
             double sigma_E;
             (void) sigma_E;  // dummy to suppress unused var warning
             stan::math::initialize(sigma_E, DUMMY_VAR__);
             stan::math::fill(sigma_E, DUMMY_VAR__);
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 41;
             double sigma_G;
             (void) sigma_G;  // dummy to suppress unused var warning
             stan::math::initialize(sigma_G, DUMMY_VAR__);
             stan::math::fill(sigma_G, DUMMY_VAR__);
             // generated quantities statements
-            current_statement_begin__ = 40;
-            stan::math::assign(sigma_E, (sigma * get_base1(part, 2, "part", 1)));
-            current_statement_begin__ = 41;
-            stan::math::assign(sigma_G, (sigma * get_base1(part, 1, "part", 1)));
+            current_statement_begin__ = 42;
+            stan::math::assign(sigma_E, (sigma * (1 - h2)));
+            current_statement_begin__ = 43;
+            stan::math::assign(sigma_G, (sigma * h2));
             // validate, write generated quantities
-            current_statement_begin__ = 38;
+            current_statement_begin__ = 40;
             vars__.push_back(sigma_E);
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 41;
             vars__.push_back(sigma_G);
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -446,12 +439,9 @@ public:
             param_name_stream__ << "beta" << '.' << j_1__ + 1;
             param_names__.push_back(param_name_stream__.str());
         }
-        size_t part_j_1_max__ = 2;
-        for (size_t j_1__ = 0; j_1__ < part_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "part" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "h2";
+        param_names__.push_back(param_name_stream__.str());
         if (!include_gqs__ && !include_tparams__) return;
         if (include_tparams__) {
         }
@@ -479,12 +469,9 @@ public:
             param_name_stream__ << "beta" << '.' << j_1__ + 1;
             param_names__.push_back(param_name_stream__.str());
         }
-        size_t part_j_1_max__ = (2 - 1);
-        for (size_t j_1__ = 0; j_1__ < part_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "part" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "h2";
+        param_names__.push_back(param_name_stream__.str());
         if (!include_gqs__ && !include_tparams__) return;
         if (include_tparams__) {
         }

@@ -1,8 +1,7 @@
-list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedantics","pedigreemm", "rstan", "mvtnorm", "bayesplot", "shinystan")
+list_pkgs <- c("lme4","lmerTest","MCMCglmm", "pedigreemm", "rstan", "mvtnorm", "bayesplot", "shinystan")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 
-library(pedantics)
 library(MCMCglmm)
 library(lme4)
 library(lmerTest)
@@ -12,15 +11,16 @@ library(mvtnorm)
 library(bayesplot)
 library(shinystan)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 10)
+options(mc.cores = 4)
 
 library(stanAnimal)
 library(AtchleyMice)
 
 ped <- read.table("volesPED.txt",header=T)
-ped <- mice_pedigree
-F6_ID = mice_info$F6$ID
-A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
+A <- as.matrix(nadiv::makeA(ped))
+#ped <- mice_pedigree
+#F6_ID = mice_info$F6$ID
+#A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
 L_A = chol(A)
 
 corrG <- matrix(c(1, 0.7, 0.2,
@@ -34,7 +34,7 @@ varE = 2*varG
 G = sqrt(varG) %*% t(sqrt(varG)) * corrG
 E = sqrt(varE) %*% t(sqrt(varE)) * corrE
 varG / (varG + varE)
-n = nrow(mice_info$F6)
+n = nrow(A)
 p = nrow(G)
 a = t(L_A) %*% matrix(rnorm(n*p), n, p) %*% chol(G)
 
@@ -46,7 +46,7 @@ colnames(beta) = c("x", "y", "z")
 rownames(beta) = c("Intercept", "sex", "Z")
 
 sex = as.numeric(as.factor(mice_info$F6$Sex))-1
-
+sex = sex[1:nrow(a)]
 Z = rnorm(nrow(a))
 Intercept = rep(1, nrow(a))
 X = cbind(Intercept, sex, Z)
@@ -68,20 +68,32 @@ model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
 summary(model_bi) 
 colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
+G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))]), 3, 3)
+corrG_mcmc = cov2cor(G_mcmc)
 
 
 stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
 
 model = rstan::extract(stan_model)
+rstan::summary(stan_model, pars = "h2")[[1]]
 rstan::summary(stan_model, pars = "G")[[1]]
 rstan::plot(stan_model, pars = "beta")
 rstan::traceplot(stan_model, pars = "G")
 rstan::traceplot(stan_model, pars = "E")
 colMeans(model$G)
+colMeans(model$corrG)
 plot(colMeans(model$a), a)
 colMeans(model$E)
 colMeans(model$beta)
 t(beta)
+
+mcmc_intervals( 
+  as.array(stan_model),  
+  pars = c("h2[1]","h2[2]","h2[3]"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean") + geom_vline(xintercept = 0.33)
+
 mcmc_intervals( 
   as.array(stan_model),  
   pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
@@ -104,3 +116,16 @@ mcmc_intervals(
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
   point_est = "mean") + geom_vline(xintercept = G[lower.tri(corrG)])
+
+mcmc_intervals( 
+  as.array(stan_model),  
+  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
+  prob = 0.8, # 80% intervals
+  prob_outer = 0.99, # 99%
+  point_est = "mean") + geom_vline(xintercept = corrG[lower.tri(corrG)])
+
+library(corrplot)
+par(mfrow=c(1,3))
+corrplot.mixed(corrG, upper = "ellipse")
+corrplot.mixed(colMeans(model$corrG), upper = "ellipse")
+corrplot.mixed(corrG_mcmc, upper = "ellipse")

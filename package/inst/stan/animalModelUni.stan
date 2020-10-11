@@ -14,7 +14,7 @@ transformed data{
 parameters {
   vector[N]  a_tilde; // breeding values
   row_vector[J] beta; // fixed effects
-  simplex[2] part; //variance partition
+  real<lower=0, upper = 1> h2; // variance partition
 
 // Total variance
   
@@ -25,18 +25,20 @@ model {
     vector[N] a;
     
     a_tilde ~ normal(0, 1);
-    a = sqrt(sigma*part[1]) * (LA * a_tilde);
+    a = sqrt(sigma*h2) * (LA * a_tilde);
  
     for(n in 1:N)
       mu[n] = beta * X[n] + a[n];
 
-    Y ~ normal(mu, sqrt(sigma*part[2]));
+    Y ~ normal(mu, sqrt(sigma*(1 - h2)));
 
     to_vector(beta) ~ normal(0, 1);
+    h2 ~ beta(2, 4);
+
 }
 generated quantities{
   real sigma_E;
   real sigma_G;
-  sigma_E = sigma*part[2];
-  sigma_G = sigma*part[1];
+  sigma_E = sigma*(1 - h2);
+  sigma_G = sigma*(    h2);
 }

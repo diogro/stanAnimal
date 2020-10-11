@@ -4,8 +4,16 @@
 \alias{lmm_multiCov}
 \title{Fit a bayesian covariance matrix}
 \usage{
-lmm_multiCov(Y, X, LKJ = 4, iter = 3000, warmup = 2000, chains = 4,
-  control = list(adapt_delta = 0.99), ...)
+lmm_multiCov(
+  Y,
+  X,
+  LKJ = 4,
+  iter = 3000,
+  warmup = 2000,
+  chains = 4,
+  control = list(adapt_delta = 0.99),
+  ...
+)
 }
 \arguments{
 \item{Y}{response variable, univariate or multivariate}

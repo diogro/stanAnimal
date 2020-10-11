@@ -15,7 +15,7 @@ transformed data{
   LA = cholesky_decompose(A);
   
   for(k in 1:K){
-    y_sd[k] = sd(Y[,k])/2;
+    y_sd[k] = sd(Y[,k]);
     y_mean[k] = mean(Y[,k]);
     for(n in 1:N)
       Y_std[n,k] = (Y[n,k] - y_mean[k]) / y_sd[k];
@@ -24,19 +24,28 @@ transformed data{
 parameters {
   matrix[K, J]    beta; // fixed effects
   matrix[N, K] a_tilde; // breeding values precursor
+  vector<lower=0, upper = 1>[K] h2; //variance partition
+
+// total variances
+  vector<lower=0>[K] L_sigma;
 
 // G matrix
   cholesky_factor_corr[K] L_Omega_G;
-  vector<lower=0>[K] L_sigma_G;
 
 // R matrix
   cholesky_factor_corr[K] L_Omega_R;
-  vector<lower=0>[K] L_sigma_R;
 
 }
 transformed parameters {
   matrix[N, K] a;
-  a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; # a ~ N(0, A x G)
+  vector<lower=0>[K] L_sigma_G;
+  vector<lower=0>[K] L_sigma_R;
+
+  for(k in 1:K){
+    L_sigma_G[k] = L_sigma[k] *    h2[k];
+    L_sigma_R[k] = L_sigma[k] * (1-h2[k]);
+  }
+  a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; // a ~ N(0, A x G)
 }
 model {
     vector[K] mu[N];
@@ -51,10 +60,10 @@ model {
 
     to_vector(beta) ~ normal(0, 1);
     to_vector(a_tilde) ~ normal(0, 1);
+    h2 ~ beta(2, 4);
+    L_sigma ~ normal(0, 1);
     L_Omega_G ~ lkj_corr_cholesky(4);
-    L_sigma_G ~ normal(0, 1);
     L_Omega_R ~ lkj_corr_cholesky(4);
-    L_sigma_R ~ normal(0, 1);
 }
 generated quantities {
     vector[K] sigma_G;
