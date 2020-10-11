@@ -21,6 +21,7 @@ remotes::install_github("diogro/stanAnimal", subdir = "package")
 ```r
 # Y trait matrix
 # X fixed effect model matrix
-# K relatedness matrix
-lmm_animal(Y, X, K)
+# A relatedness matrix
+A = nadiv::makeA(pedigree)
+lmm_animal(Y, X, A)
 ```
