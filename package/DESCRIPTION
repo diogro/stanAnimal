@@ -1,4 +1,4 @@
-Package: stAnimal
+Package: stanAnimal
 Version: 0.2.0
 Title: Animal models in Stan
 Description: Fit linear animal models in Stan for one or more traits.
