@@ -1,15 +1,9 @@
-list_pkgs <- c("lme4","lmerTest","MCMCglmm", "pedigreemm", "rstan", "mvtnorm", "bayesplot", "shinystan")
-new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
-if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
+if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
+if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
+if(!require(rstan)){install.packages("rstan"); library(rstan)}
+if(!require(bayesplot)){install.packages("bayesplot"); library(bayesplot)}library(mvtnorm)
+if(!require(nadiv)){install.packages("nadiv"); library(nadiv)}
 
-library(MCMCglmm)
-library(lme4)
-library(lmerTest)
-library(pedigreemm)
-library(rstan)
-library(mvtnorm)
-library(bayesplot)
-library(shinystan)
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
@@ -39,7 +33,7 @@ p = nrow(G)
 a = t(L_A) %*% matrix(rnorm(n*p), n, p) %*% chol(G)
 
 
-beta = matrix(c(1, 2, 3, 
+beta = matrix(c(1, 2, 3,
                 0.1, 0.2, 0.5,
                 0.05, 0.1, 0.3), 3, 3, byrow = TRUE)
 colnames(beta) = c("x", "y", "z")
@@ -66,7 +60,7 @@ model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
                      pedigree = ped, data = sim_data, prior = prior_bi,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
-summary(model_bi) 
+summary(model_bi)
 colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
 G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))]), 3, 3)
 corrG_mcmc = cov2cor(G_mcmc)
@@ -87,38 +81,38 @@ colMeans(model$E)
 colMeans(model$beta)
 t(beta)
 
-mcmc_intervals( 
-  as.array(stan_model),  
+mcmc_intervals(
+  as.array(stan_model),
   pars = c("h2[1]","h2[2]","h2[3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
   point_est = "mean") + geom_vline(xintercept = 0.33)
 
-mcmc_intervals( 
-  as.array(stan_model),  
+mcmc_intervals(
+  as.array(stan_model),
   pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.animal", 
-                                                                         "traity:traity.animal", 
+  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.animal",
+                                                                         "traity:traity.animal",
                                                                          "traitz:traitz.animal")]))
-mcmc_intervals( 
-  as.array(stan_model),  
+mcmc_intervals(
+  as.array(stan_model),
   pars = c("E[1,1]", "E[2,2]", "E[3,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.units", 
-                                                                         "traity:traity.units", 
+  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.units",
+                                                                         "traity:traity.units",
                                                                          "traitz:traitz.units")]))
-mcmc_intervals( 
-  as.array(stan_model),  
+mcmc_intervals(
+  as.array(stan_model),
   pars = c("G[1,2]", "G[1,3]", "G[2,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
   point_est = "mean") + geom_vline(xintercept = G[lower.tri(corrG)])
 
-mcmc_intervals( 
-  as.array(stan_model),  
+mcmc_intervals(
+  as.array(stan_model),
   pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
   prob = 0.8, # 80% intervals
   prob_outer = 0.99, # 99%
