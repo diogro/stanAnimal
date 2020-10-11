@@ -2,7 +2,7 @@
 
 Animal model implementation in Stan.
 
-Very experimental, univariate works better.
+Somewhat experimental, univariate works better, but multivariate is pretty good too.
 
 # Install
 
