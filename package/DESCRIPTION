@@ -16,7 +16,8 @@ Imports:
     rstantools (>= 2.0.0),
     R.matlab,
     rhdf5,
-    JuliaCall
+    JuliaCall,
+    cmdstanr
 LinkingTo: 
     BH (>= 1.66.0),
     Rcpp (>= 0.12.0),

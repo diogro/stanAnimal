@@ -12,6 +12,7 @@ lmm_animal(
   warmup = floor(iter/2),
   chains = 4,
   control = list(adapt_delta = 0.99),
+  cmd_stan = TRUE,
   ...
 )
 }
@@ -29,6 +30,8 @@ lmm_animal(
 \item{chains}{number of chains to run}
 
 \item{control}{list of stan control arguments}
+
+\item{cmd_stan}{Logical, use cmd_stan. If false, uses rstan}
 
 \item{...}{additional parameters for stan sampling}
 }

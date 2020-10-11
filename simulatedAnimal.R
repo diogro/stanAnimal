@@ -14,6 +14,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
 library(stanAnimal)
+"cmdstanr" %in% installed.packages()[,"Package"]
 library(AtchleyMice)
 
 ped <- read.table("volesPED.txt",header=T)
@@ -72,7 +73,7 @@ G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))])
 corrG_mcmc = cov2cor(G_mcmc)
 
 
-stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000)
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000, cores = 4)
 
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "h2")[[1]]
