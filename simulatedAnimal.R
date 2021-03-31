@@ -1,8 +1,11 @@
 if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
 if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
 if(!require(rstan)){install.packages("rstan"); library(rstan)}
-if(!require(bayesplot)){install.packages("bayesplot"); library(bayesplot)}library(mvtnorm)
+if(!require(bayesplot)){install.packages("bayesplot"); library(bayesplot)}
+if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
 if(!require(nadiv)){install.packages("nadiv"); library(nadiv)}
+if(!require(tictoc)){install.packages("tictoc"); library(tictoc)}
+if(!require(pedtools)){install.packages("pedtools"); library(pedtools)}
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
@@ -11,7 +14,11 @@ library(stanAnimal)
 "cmdstanr" %in% installed.packages()[,"Package"]
 library(AtchleyMice)
 
-ped <- read.table("volesPED.txt",header=T)
+#ped <- read.table("volesPED.txt",header=T)
+ped = randomPed(100, 10, seed = 2)
+plot(ped)
+ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
+ped = prepPed(ped)
 A <- as.matrix(nadiv::makeA(ped))
 #ped <- mice_pedigree
 #F6_ID = mice_info$F6$ID
@@ -56,18 +63,23 @@ sim_data = data.frame(Y, X, animal = rownames(a))
 
 prior_bi <- list(G = list(G1 = list(V = diag(3), n = 1.002)),
                           R = list(V = diag(3), n = 1.002))
+tic()
 model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
                      random = ~us(trait):animal,
                      rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
                      pedigree = ped, data = sim_data, prior = prior_bi,
                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
+toc()
 summary(model_bi)
 colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
 G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))]), 3, 3)
 corrG_mcmc = cov2cor(G_mcmc)
 
 
-stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000, cores = 4)
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 200, warmup = 100, 
+                        cores = 4)
+
+
 
 model = rstan::extract(stan_model)
 rstan::summary(stan_model, pars = "h2")[[1]]
@@ -75,10 +87,12 @@ rstan::summary(stan_model, pars = "G")[[1]]
 rstan::plot(stan_model, pars = "beta")
 rstan::traceplot(stan_model, pars = "G")
 rstan::traceplot(stan_model, pars = "E")
-colMeans(model$G)
+colMeans(model$L_sigma)
 colMeans(model$corrG)
 plot(colMeans(model$a), a)
-colMeans(model$E)
+colMeans(model$corrE)
+cov2cor(colMeans(model$P))
+
 colMeans(model$beta)
 t(beta)
 
@@ -121,6 +135,7 @@ mcmc_intervals(
 
 library(corrplot)
 par(mfrow=c(1,3))
-corrplot.mixed(corrG, upper = "ellipse")
+corrplot.mixed(cor(a), upper = "ellipse")
 corrplot.mixed(colMeans(model$corrG), upper = "ellipse")
 corrplot.mixed(corrG_mcmc, upper = "ellipse")
+

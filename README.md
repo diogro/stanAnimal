@@ -13,6 +13,7 @@ BiocManager::install("rhdf5")
 install.packages("remotes")
 remotes::install_github("stan-dev/cmdstanr")
 cmdstanr::install_cmdstan() 
+install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 remotes::install_github("diogro/stanAnimal", subdir = "package")
 ```
 

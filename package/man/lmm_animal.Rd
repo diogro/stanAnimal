@@ -8,9 +8,13 @@ lmm_animal(
   Y,
   X,
   A,
+  lkj_prior = 2,
+  beta_prior = c(2, 4),
   iter = 3000,
   warmup = floor(iter/2),
   chains = 4,
+  cores = chains,
+  model_file = NULL,
   control = list(adapt_delta = 0.99),
   cmd_stan = TRUE,
   ...
@@ -19,19 +23,23 @@ lmm_animal(
 \arguments{
 \item{Y}{response variable, univariate or multivariate}
 
-\item{X}{fixed model matrix}
+\item{X}{fixed model matrix.}
 
-\item{A}{relatedness matrix}
+\item{A}{relatedness matrix.}
 
-\item{iter}{number of MCMC iterations}
+\item{lkj_prior}{Parameter of the prior on the correlations. Larger means more shrinkage.}
+
+\item{beta_prior}{Parameter of the beta prior on the h2.}
+
+\item{iter}{number of MCMC iterations.}
 
 \item{warmup}{number of warmup iterations, must be smaller than iter}
 
-\item{chains}{number of chains to run}
+\item{chains}{number of chains to run.}
 
-\item{control}{list of stan control arguments}
+\item{control}{list of stan control arguments.}
 
-\item{cmd_stan}{Logical, use cmd_stan. If false, uses rstan}
+\item{cmd_stan}{Logical, use cmd_stan. If false, uses rstan.}
 
 \item{...}{additional parameters for stan sampling}
 }
