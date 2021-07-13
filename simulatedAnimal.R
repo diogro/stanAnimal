@@ -12,6 +12,7 @@ options(mc.cores = 4)
 
 library(stanAnimal)
 "cmdstanr" %in% installed.packages()[,"Package"]
+#cmdstanr::install_cmdstan(cores = 2)
 library(AtchleyMice)
 
 #ped <- read.table("volesPED.txt",header=T)
@@ -31,7 +32,7 @@ corrG <- matrix(c(1, 0.7, 0.2,
 corrE <- matrix(c(  1, 0.2, 0.0,
                   0.2,   1, 0.0,
                   0.0, 0.0,  1), 3, 3, byrow = T)
-varG = 1:3*10
+varG = rep(1, 3)
 varE = 2*varG
 G = sqrt(varG) %*% t(sqrt(varG)) * corrG
 E = sqrt(varE) %*% t(sqrt(varE)) * corrE
@@ -76,8 +77,8 @@ G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))])
 corrG_mcmc = cov2cor(G_mcmc)
 
 
-stan_model = lmm_animal(Y, X, A, chains = 4, iter = 200, warmup = 100, 
-                        cores = 4)
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000, 
+                        cores = 4, lkj_prior = 2)
 
 
 
