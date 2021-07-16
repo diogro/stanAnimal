@@ -47,8 +47,7 @@ transformed parameters {
     L_sigma_G[k] = L_sigma[k] *    h2[k];
     L_sigma_R[k] = L_sigma[k] * (1-h2[k]);
   }
-  a = diag_pre_multiply(L_sigma_G, L_Omega_G) * a_tilde * LA';  // a ~ N(0, A x G)
-  //a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; //old
+  a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; // a ~ N(0, A x G)
 }
 model {
     vector[K] mu[N];
