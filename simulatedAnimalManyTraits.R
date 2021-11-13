@@ -28,7 +28,7 @@ nrow(A)
 #A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
 L_A = chol(A)
 
-n_traits = 30
+n_traits = 25
 
 set.seed(41)
 (G <- RandomMatrix(n_traits, LKJ = FALSE))
@@ -59,7 +59,7 @@ Y = X %*% beta + a + e
 apply(Y, 2, mean)
 apply(Y, 2, sd)
 apply(a, 2, sd)
-stan_model = lmm_animal(Y, X, A, lkj_prior = 4, chains = 4, iter = 400, warmup = 200,
+stan_model = lmm_animal(Y, X, A, lkj_prior = 8, chains = 4, iter = 400, warmup = 200,
                         cores = 4, control = list(max_treedepth = 10),
                         cmd_stan = FALSE)
 
