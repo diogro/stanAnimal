@@ -28,7 +28,7 @@ nrow(A)
 #A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
 L_A = chol(A)
 
-n_traits = 20
+n_traits = 25
 
 set.seed(41)
 (G <- RandomMatrix(n_traits, LKJ = FALSE))
@@ -52,34 +52,37 @@ X = cbind(Intercept, sex, Z)
 rownames(X) = rownames(a)
 e = rmvnorm(nrow(a), sigma = E)
 
-#Y = X %*% beta + a + e
-Y = 1 + a + e
+Y = X %*% beta + a + e
+#Y = 1 + a + e
 
 
 apply(Y, 2, mean)
 apply(Y, 2, sd)
 apply(a, 2, sd)
-stan_model = lmm_animal(Y, X[,1, drop = F], A, lkj_prior = 4, chains = 4, iter = 4000, warmup = 2000, 
-                        cores = 4, control = list(max_treedepth = 10))
+stan_model = lmm_animal(Y, X, A, lkj_prior = 8, chains = 4, iter = 400, warmup = 200,
+                        cores = 4, control = list(max_treedepth = 10),
+                        cmd_stan = FALSE)
 
 model = rstan::extract(stan_model, permuted = TRUE)
-str(model)
+
 rstan::summary(stan_model, pars = c("h2", "L_sigma", "L_sigma_G"))[[1]]
 rstan::summary(stan_model, pars = "G")[[1]]
-dimnames(model)
-colMeans(model[,1,grep("^L_sigma", dimnames(model)[[3]])])
-colMeans(model[,2,grep("^L_sigma", dimnames(model)[[3]])])
-colMeans(model[,3,grep("^L_sigma", dimnames(model)[[3]])])
-colMeans(model[,4,grep("^L_sigma", dimnames(model)[[3]])])
-diag(G_stan)
+
 plot(colMeans(model$a), a, pch = 19)
+abline(0, 1)
+
 
 par(mfrow = c(1, 1))
 plot(lt(cov(a)), lt(colMeans(model$G)), pch = 19)
+points(lt(G), lt(colMeans(model$G)), pch = 19, col = "red")
 abline(0, 1)
 
 colMeans(model$beta)
 t(beta)
+
+mcmc_areas(as.array(stan_model),
+           pars = c("G[1,1]"),
+           prob = 0.8)
 
 mcmc_intervals(
   as.array(stan_model),
