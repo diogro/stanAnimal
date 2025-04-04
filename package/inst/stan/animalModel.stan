@@ -57,10 +57,11 @@ model {
     to_vector(beta) ~ normal(0, 1);
     to_vector(a_tilde) ~ normal(0, 1);
     h2 ~ beta(beta_prior[1], beta_prior[2]);
-    L_sigma ~ normal(1, 0.5);
+    L_sigma ~ normal(0, 0.5);
     L_Omega_G ~ lkj_corr_cholesky(lkj_prior);
 }
 generated quantities {
+    vector[K] sigma_P;
     vector[K] sigma_G;
     vector[K] sigma_R;
     cov_matrix[K] P;
