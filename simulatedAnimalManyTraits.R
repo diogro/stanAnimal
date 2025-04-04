@@ -111,4 +111,4 @@ corrplot.mixed(cor(a), upper = "ellipse")
 corrplot.mixed(colMeans(model$corrG), upper = "ellipse")
 corrplot.mixed(colMeans(model$corrE), upper = "ellipse")
 
-
+cov(a)
