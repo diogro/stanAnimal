@@ -18,6 +18,7 @@ lmm_animal(
   control = list(adapt_delta = 0.99),
   cmd_stan = TRUE,
   blend_A = FALSE,
+  residual_structure = c("diagonal", "unstructured"),
   ...
 )
 }
@@ -43,6 +44,8 @@ lmm_animal(
 \item{cmd_stan}{Logical, use cmd_stan. If false, uses rstan.}
 
 \item{blend_A}{If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.}
+
+\item{residual_structure}{Residual covariance for multivariate fits: "diagonal" or "unstructured".}
 
 \item{...}{additional parameters for stan sampling}
 }

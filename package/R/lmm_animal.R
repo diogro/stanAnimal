@@ -12,13 +12,16 @@
 #' @param control list of stan control arguments.
 #' @param cmd_stan Logical, use cmd_stan. If false, uses rstan.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
+#' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured".
 #' @param ... additional parameters for stan sampling
 #' @export
 #' @author Diogo Melo
 lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4), 
                       iter = 3000, warmup = floor(iter/2), 
                       chains = 4, cores = chains, model_file = NULL, control = list(adapt_delta = 0.99), 
-                      cmd_stan = TRUE, blend_A = FALSE, ...){
+                      cmd_stan = TRUE, blend_A = FALSE,
+                      residual_structure = c("diagonal", "unstructured"), ...){
+  residual_structure <- match.arg(residual_structure)
   if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
   Y <- as.matrix(Y)
   X <- as.matrix(X)
@@ -98,25 +101,50 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                      lkj_prior =  lkj_prior,
                      beta_prior= beta_prior)
     if(cmd_stan){
-      if(is.null(model_file))
+      if(is.null(model_file) && residual_structure == "diagonal")
         model_code = stanmodels$animalModel@model_code
       else
-        model_code = readChar(model_file, 1e5)
+        model_code = .read_animal_model_code(model_file, residual_structure)
       fit = cstan(model_code = model_code, 
                   data = stan_data, 
                   iter = iter, warmup = warmup, chains = chains , cores = cores, 
                   control=control , ...)
-    }
-    else
-      fit = rstan::sampling(stanmodels$animalModel, 
+    } else {
+      if(is.null(model_file) && residual_structure == "diagonal") {
+        model = stanmodels$animalModel
+      } else {
+        model_code = .read_animal_model_code(model_file, residual_structure)
+        model = rstan::stan_model(
+          model_code = model_code,
+          model_name = if (residual_structure == "unstructured") "animalModelCorR" else "animalModel"
+        )
+      }
+      fit = rstan::sampling(model,
                             data = stan_data, 
                             iter = iter, warmup = warmup, chains = chains, 
                             control = control, ...)
+    }
     if(!is.null(colnames(X))){
       names(fit)[grep("beta", names(fit))] = colnames(X)
     }
   }
   return(fit)
+}
+
+.read_animal_model_code <- function(model_file, residual_structure) {
+  if (!is.null(model_file))
+    return(readChar(model_file, file.info(model_file)$size))
+
+  model_filename <- if (residual_structure == "unstructured")
+    "animalModelCorR.stan" else "animalModel.stan"
+  model_path <- system.file("stan", model_filename, package = "stanAnimal")
+  if (!nzchar(model_path)) {
+    candidates <- file.path(c("inst/stan", "package/inst/stan"), model_filename)
+    model_path <- candidates[file.exists(candidates)][1L]
+  }
+  if (is.na(model_path) || !file.exists(model_path))
+    stop("Could not locate the requested Stan model source.")
+  paste(readLines(model_path, warn = FALSE), collapse = "\n")
 }
 
 setClass("animalUni",    contains = "stanfit")
