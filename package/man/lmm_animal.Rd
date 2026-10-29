@@ -17,15 +17,16 @@ lmm_animal(
   model_file = NULL,
   control = list(adapt_delta = 0.99),
   cmd_stan = TRUE,
+  blend_A = FALSE,
   ...
 )
 }
 \arguments{
 \item{Y}{response variable, univariate or multivariate}
 
-\item{X}{fixed model matrix.}
+\item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank.}
 
-\item{A}{relatedness matrix.}
+\item{A}{Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.}
 
 \item{lkj_prior}{Parameter of the prior on the correlations. Larger means more shrinkage.}
 
@@ -40,6 +41,8 @@ lmm_animal(
 \item{control}{list of stan control arguments.}
 
 \item{cmd_stan}{Logical, use cmd_stan. If false, uses rstan.}
+
+\item{blend_A}{If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.}
 
 \item{...}{additional parameters for stan sampling}
 }

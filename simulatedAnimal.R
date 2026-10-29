@@ -5,7 +5,7 @@ if(!require(bayesplot)){install.packages("bayesplot"); library(bayesplot)}
 if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
 if(!require(nadiv)){install.packages("nadiv"); library(nadiv)}
 if(!require(tictoc)){install.packages("tictoc"); library(tictoc)}
-if(!require(pedtools)){install.packages("pedtools"); library(pedtools)}
+if(!require(pedtools)){pak::pkg_install("cran/pedtools"); library(pedtools)}
 
 pak::pkg_install(c("tidyverse", "devtools",  "roxygen2"))
 library(devtools)

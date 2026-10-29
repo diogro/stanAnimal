@@ -3,6 +3,7 @@
 S3method(print,animalUni)
 export(genAnimalModelInput)
 export(lmm_animal)
+export(lmm_animal_gibbs)
 export(lmm_multiCov)
 export(saveHDF5animalModel)
 exportClasses(animalUni)
