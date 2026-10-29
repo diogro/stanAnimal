@@ -2,7 +2,6 @@ list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedantics","pedigreemm", "rstan", "
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 
-library(pedantics)
 library(MCMCglmm)
 library(lme4)
 library(lmerTest)
@@ -89,4 +88,7 @@ mcmc_intervals(
   prob_outer = 0.99, # 99%
   point_est = "mean")
 mcmc_trace(as.array(stan_model),  
+  pars = c("sigma_G", "sigma_E"))
+mcmc_pairs(
+  as.array(stan_model),
   pars = c("sigma_G", "sigma_E"))

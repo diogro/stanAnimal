@@ -7,8 +7,10 @@ if(!require(nadiv)){install.packages("nadiv"); library(nadiv)}
 if(!require(tictoc)){install.packages("tictoc"); library(tictoc)}
 if(!require(pedtools)){install.packages("pedtools"); library(pedtools)}
 
+pak::pkg_install(c("tidyverse", "devtools",  "roxygen2"))
+library(devtools)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 4)
+options(mc.cores = 12)
 
 library(stanAnimal)
 "cmdstanr" %in% installed.packages()[,"Package"]
@@ -62,19 +64,19 @@ colnames(Y) = c("x", "y", "z")
 
 sim_data = data.frame(Y, X, animal = rownames(a))
 
-prior_bi <- list(G = list(G1 = list(V = diag(3), n = 1.002)),
-                          R = list(V = diag(3), n = 1.002))
-tic()
-model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
-                     random = ~us(trait):animal,
-                     rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
-                     pedigree = ped, data = sim_data, prior = prior_bi,
-                     nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
-toc()
-summary(model_bi)
-colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
-G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))]), 3, 3)
-corrG_mcmc = cov2cor(G_mcmc)
+# prior_bi <- list(G = list(G1 = list(V = diag(3), nu = 1.002)),
+#                           R = list(V = diag(3), nu = 1.002))
+# tic()
+# model_bi <- MCMCglmm(cbind(x, y, z) ~ trait + trait:sex + trait:Z,
+#                      random = ~us(trait):animal,
+#                      rcov = ~us(trait):units, family = c("gaussian", "gaussian", "gaussian"),
+#                      pedigree = ped, data = sim_data, prior = prior_bi,
+#                      nitt = 130000, thin = 100, burnin = 30000, verbose = TRUE)
+# toc()
+# summary(model_bi)
+# colMeans(model_bi$VCV[,c("traitx:traitx.animal", "traity:traity.animal", "traitz:traitz.animal")])
+# G_mcmc = matrix(colMeans(model_bi$VCV[, grep("animal", colnames(model_bi$VCV))]), 3, 3)
+# corrG_mcmc = cov2cor(G_mcmc)
 
 
 stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000, 

@@ -7,14 +7,12 @@ Somewhat experimental, univariate works better, but multivariate is pretty good 
 # Install
 
 ```r
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install("rhdf5")
-install.packages("remotes")
-remotes::install_github("stan-dev/cmdstanr")
+if (!requireNamespace("pak", quietly = TRUE))
+    install.packages("pak")
+pak::pkg_install(c("rhdf5", "stan-dev/cmdstanr"))
 cmdstanr::install_cmdstan() 
 install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-remotes::install_github("diogro/stanAnimal", subdir = "package")
+pak::pkg_install("diogro/stanAnimal/package")
 ```
 
 # Usage

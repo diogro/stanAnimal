@@ -2,8 +2,8 @@ data {
   int<lower=1>    K; // number of traits
   int<lower=1>    J; // number of fixed effects
   int<lower=0>    N; // number of individuals
-  vector[J]    X[N]; // Fixed effects design matrix
-  vector[K]    Y[N]; // response variable
+  array[N] vector[J] X; // Fixed effects design matrix
+  array[N] vector[K] Y; // response variable
   int<lower=1>    c; // LKJ parameter
 }
 
@@ -12,7 +12,7 @@ transformed data{
   vector[K] y_sd;
   vector[K] y_var;
   vector[K] y_mean;
-  vector[K] Y_std[N]; // response variable
+  array[N] vector[K] Y_std; // response variable
 
   for(k in 1:K){
     y_sd[k] = sd(Y[,k])/2;
@@ -31,7 +31,7 @@ parameters {
 }
 
 model {
-    vector[K] mu[N];
+    array[N] vector[K] mu;
     matrix[K, K] L_Sigma_R;
 
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);

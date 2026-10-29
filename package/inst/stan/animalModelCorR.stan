@@ -2,8 +2,8 @@ data {
   int<lower=1>    K; // number of traits
   int<lower=1>    J; // number of fixed effects
   int<lower=0>    N; // number of individuals
-  vector[J]    X[N]; // Fixed effects design matrix
-  vector[K]    Y[N]; // response variable
+  array[N] vector[J] X; // Fixed effects design matrix
+  array[N] vector[K] Y; // response variable
   matrix[N, N]    A; // known covariance matrix
   int<lower=1>  lkj_prior; // LKJ prior, controls shrinkage of the correlations
   vector<lower=0>[2] beta_prior; // h2 beta prior parameters
@@ -13,7 +13,7 @@ transformed data{
   vector[K] y_sd;
   vector[K] y_var;
   vector[K] y_mean;
-  vector[K] Y_std[N]; // response variable
+  array[N] vector[K] Y_std; // response variable
   LA = cholesky_decompose(A);
 
   for(k in 1:K){
@@ -44,13 +44,13 @@ transformed parameters {
   vector<lower=0>[K] L_sigma_R;
 
   for(k in 1:K){
-    L_sigma_G[k] = L_sigma[k] *    h2[k];
-    L_sigma_R[k] = L_sigma[k] * (1-h2[k]);
+    L_sigma_G[k] = L_sigma[k] * sqrt(h2[k]);
+    L_sigma_R[k] = L_sigma[k] * sqrt(1-h2[k]);
   }
   a = (LA * a_tilde) * diag_pre_multiply(L_sigma_G, L_Omega_G)'; // a ~ N(0, A x G)
 }
 model {
-    vector[K] mu[N];
+    array[N] vector[K] mu;
     matrix[K, K] L_Sigma_R;
 
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);

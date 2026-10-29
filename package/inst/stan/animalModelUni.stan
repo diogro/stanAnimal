@@ -1,8 +1,8 @@
 data {
   int<lower=1>    J; // number of fixed effects
   int<lower=0>    N; // number of individuals
-  vector[J]    X[N]; // Fixed effects design matrix
-  real         Y[N]; // response variable
+  array[N] vector[J] X; // Fixed effects design matrix
+  array[N] real Y; // response variable
   cov_matrix[N]   A; // known covariance matrix
 }
 transformed data{
