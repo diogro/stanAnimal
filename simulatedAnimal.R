@@ -82,66 +82,86 @@ sim_data = data.frame(Y, X, animal = rownames(a))
 # corrG_mcmc = cov2cor(G_mcmc)
 
 
-stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000, 
+stan_model = lmm_animal(Y, X, A, chains = 4, iter = 2000, warmup = 1000,
                         cores = 4, lkj_prior = 2)
 
+# The fit is a CmdStanMCMC object: summaries and diagnostics use its methods,
+# and draws work with posterior and bayesplot.
 
+## Summaries
+stan_model$summary(c("h2", "G", "E", "corrG"))
+stan_model$summary(c("h2", "G", "E", "corrG"),
+                   posterior::default_convergence_measures())
 
-model = rstan::extract(stan_model)
-rstan::summary(stan_model, pars = "h2")[[1]]
-rstan::summary(stan_model, pars = "G")[[1]]
-rstan::plot(stan_model, pars = "beta")
-rstan::traceplot(stan_model, pars = "G")
-rstan::traceplot(stan_model, pars = "E")
-colMeans(model$L_sigma)
-colMeans(model$corrG)
-plot(colMeans(model$a), a)
-colMeans(model$corrE)
-cov2cor(colMeans(model$P))
+## Sampler diagnostics (divergences, treedepth, E-BFMI)
+stan_model$diagnostic_summary()
 
-colMeans(model$beta)
+# Fixed effects are named after the columns of X: beta[trait, column]
+beta_draws = animal_draws(stan_model, "beta")
+posterior::summarise_draws(beta_draws)
+
+# Residual correlations are not a model output; derive them from the draws
+draws_df = posterior::as_draws_df(stan_model$draws(c("G", "E", "corrG", "h2")))
+draws_df = posterior::mutate_variables(
+  draws_df,
+  `corrE[1,2]` = `E[1,2]` / sqrt(`E[1,1]` * `E[2,2]`),
+  `corrE[1,3]` = `E[1,3]` / sqrt(`E[1,1]` * `E[3,3]`),
+  `corrE[2,3]` = `E[2,3]` / sqrt(`E[2,2]` * `E[3,3]`))
+posterior::summarise_draws(posterior::subset_draws(draws_df, variable = "corrE"))
+
+# Posterior means as matrices, compared with the simulated truth
+post_mean = function(name, k = 3) {
+  s = stan_model$summary(name, "mean")
+  matrix(s$mean[match(sprintf("%s[%d,%d]", name, rep(1:k, k), rep(1:k, each = k)),
+                      s$variable)], k)
+}
+G_hat = post_mean("G")
+E_hat = post_mean("E")
+round(G_hat, 2); round(G, 2)
+round(E_hat, 2); round(E, 2)
+round(cov2cor(post_mean("P")), 2)
+
+# Fixed effects, original scale: rows are traits, as in t(beta)
+beta_hat = stan_model$summary("beta", "mean")$mean
+round(matrix(beta_hat, 3), 2)
 t(beta)
 
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("h2[1]","h2[2]","h2[3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = 0.33)
+## Visualization
+bayesplot::color_scheme_set("blue")
 
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.animal",
-                                                                         "traity:traity.animal",
-                                                                         "traitz:traitz.animal")]))
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("E[1,1]", "E[2,2]", "E[3,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = colMeans(model_bi$VCV[,c("traitx:traitx.units",
-                                                                         "traity:traity.units",
-                                                                         "traitz:traitz.units")]))
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("G[1,2]", "G[1,3]", "G[2,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = G[lower.tri(corrG)])
+# Traces and densities
+bayesplot::mcmc_trace(stan_model$draws("G"))
+bayesplot::mcmc_trace(stan_model$draws("E"))
+bayesplot::mcmc_dens_overlay(stan_model$draws("h2"))
 
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = corrG[lower.tri(corrG)])
+# Convergence and sampler checks
+all_draws = stan_model$draws()
+bayesplot::mcmc_rhat(posterior::summarise_draws(all_draws, "rhat")$rhat)
+bayesplot::mcmc_neff(posterior::summarise_draws(all_draws, "ess_bulk")$ess_bulk /
+                       posterior::ndraws(all_draws))
+bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(stan_model))
 
+# Fixed effects
+bayesplot::mcmc_intervals(beta_draws)
+
+# Intervals with the simulated truth as a reference line
+interval_plot = function(pars, truth) {
+  bayesplot::mcmc_intervals(
+    stan_model$draws(), pars = pars,
+    prob = 0.8, prob_outer = 0.99, point_est = "mean") +
+    ggplot2::geom_vline(xintercept = truth)
+}
+interval_plot(c("h2[1]", "h2[2]", "h2[3]"), diag(G) / (diag(G) + diag(E)))
+interval_plot(c("G[1,1]", "G[2,2]", "G[3,3]"), diag(G))
+interval_plot(c("E[1,1]", "E[2,2]", "E[3,3]"), diag(E))
+interval_plot(c("G[1,2]", "G[1,3]", "G[2,3]"), G[lower.tri(G)])
+interval_plot(c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"), corrG[lower.tri(corrG)])
+
+# Estimated vs simulated genetic correlations
 library(corrplot)
-par(mfrow=c(1,3))
-corrplot.mixed(cor(a), upper = "ellipse")
-corrplot.mixed(colMeans(model$corrG), upper = "ellipse")
-corrplot.mixed(corrG_mcmc, upper = "ellipse")
+par(mfrow = c(1, 3))
+corrplot.mixed(cor(a), upper = "ellipse")      # realized breeding values
+corrplot.mixed(post_mean("corrG"), upper = "ellipse")
+corrplot.mixed(corrG, upper = "ellipse")       # truth
+par(mfrow = c(1, 1))
 
