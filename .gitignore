@@ -36,3 +36,5 @@ vignettes/*.pdf
 *.knit.md
 .Rproj.user
 stanAnimal.Rproj
+results/
+Rplots.pdf
