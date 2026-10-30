@@ -5,17 +5,19 @@
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.
 #' @param lkj_prior Parameter of the prior on the correlations. Larger means more shrinkage.
-#' @param beta_prior Parameter of the beta prior on the h2. 
+#' @param beta_prior Parameters of the beta prior on h2. Used only by the univariate model; the multivariate model parametrizes G and E directly and has no prior on h2.
 #' @param iter number of MCMC iterations.
 #' @param warmup number of warmup iterations, must be smaller than iter
 #' @param chains number of chains to run.
 #' @param control list of stan control arguments.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
-#' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured".
+#' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured" (full covariance between traits). With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance, so "unstructured" is recommended when estimating G.
 #' @param ... additional parameters for stan sampling
 #' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{animal_draws}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
-#' @details Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled} and a free total variance on the standardized scale.
+#' @details The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects and only requires \code{A} to be positive semidefinite. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
+#'
+#' Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled} and a free total variance on the standardized scale.
 #' @export
 #' @author Diogo Melo
 lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4), 
@@ -79,7 +81,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
     if(cmd_stan){
       model_code = if(is.null(model_file))
         stanmodels$animalModelUni@model_code else
-          .read_animal_model_code(model_file, "diagonal")
+          .read_animal_model_code(model_file, "animalModelUni.stan")
       fit = cstan(model_code = model_code,
                   data = stan_data,
                   iter = iter, warmup = warmup, chains = chains, cores = cores,
@@ -89,7 +91,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
     else {
       model_code <- if (is.null(model_file))
         stanmodels$animalModelUni@model_code else
-          .read_animal_model_code(model_file, "diagonal")
+          .read_animal_model_code(model_file, "animalModelUni.stan")
       model <- .get_rstan_model(
         model_code,
         "animalModelUni_runtime",
@@ -107,36 +109,27 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                      X = X,
                      Y = Y,
                      A = A,
-                     lkj_prior =  lkj_prior,
-                     beta_prior= beta_prior)
+                     lkj_prior = lkj_prior,
+                     unstructured_E = as.integer(residual_structure == "unstructured"))
+    model_code <- .read_animal_model_code(model_file)
     if(cmd_stan){
-      if(is.null(model_file) && residual_structure == "diagonal")
-        model_code = stanmodels$animalModel@model_code
-      else
-        model_code = .read_animal_model_code(model_file, residual_structure)
-      fit = cstan(model_code = model_code, 
-                  data = stan_data, 
-                  iter = iter, warmup = warmup, chains = chains , cores = cores, 
+      fit = cstan(model_code = model_code,
+                  data = stan_data,
+                  iter = iter, warmup = warmup, chains = chains , cores = cores,
                   control=control , ...)
       attr(fit, "x_names") <- colnames(X)
     } else {
-      model_code <- if (is.null(model_file) && residual_structure == "diagonal")
-        stanmodels$animalModel@model_code else
-          .read_animal_model_code(model_file, residual_structure)
-      cache_key <- if (is.null(model_file))
-        paste0("animalModel_", residual_structure) else NULL
       model <- .get_rstan_model(
         model_code,
-        paste0("animalModel_", residual_structure, "_runtime"),
-        cache_key
+        "animalModelG_runtime",
+        if (is.null(model_file)) "animalModelG" else NULL
       )
       fit = rstan::sampling(model,
-                            data = stan_data, 
-                            iter = iter, warmup = warmup, chains = chains, 
+                            data = stan_data,
+                            iter = iter, warmup = warmup, chains = chains,
                             control = control, ...)
-    }
-    if(!cmd_stan)
       fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
+    }
   }
   return(fit)
 }
@@ -188,12 +181,11 @@ animal_draws <- function(fit, variables = NULL, ...) {
   draws
 }
 
-.read_animal_model_code <- function(model_file, residual_structure) {
+.read_animal_model_code <- function(model_file, default = "animalModelG.stan") {
   if (!is.null(model_file))
     return(readChar(model_file, file.info(model_file)$size))
 
-  model_filename <- if (residual_structure == "unstructured")
-    "animalModelCorR.stan" else "animalModel.stan"
+  model_filename <- default
   model_path <- system.file("stan", model_filename, package = "stanAnimal")
   if (!nzchar(model_path)) {
     candidates <- file.path(c("inst/stan", "package/inst/stan"), model_filename)
