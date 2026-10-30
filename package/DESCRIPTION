@@ -1,8 +1,9 @@
 Package: stanAnimal
-Version: 0.2.0
+Version: 0.3.0
 Title: Animal models in Stan
 Description: Fit linear animal models in Stan for one or more traits.
 Authors@R: person("Diogo", "Melo", , "diogro@gmail.com", c("aut", "cre"))
+Maintainer: Diogo Melo <diogro@gmail.com>
 License: GPL (>=3)
 Encoding: UTF-8
 LazyData: true
@@ -11,5 +12,11 @@ Depends:
 Imports: 
     rstan (>= 2.18.1),
     cmdstanr,
-    posterior
+    posterior,
+    tools,
+    utils
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/testthat/parallel: true
 Config/roxygen2/version: 8.1.1

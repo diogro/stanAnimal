@@ -103,6 +103,10 @@ fit <- lmm_animal(y, X, A, parametrization = "h2")
 
 All models standardize the response and divide continuous predictors by their standard deviation (constant and 0/1 columns are not scaled) for better sampling. Coefficients are back-transformed, so `beta` is in the original units of `X` and `Y`; the intercept is recovered when `X` has a constant column.
 
+## Compilation cache
+
+Models fit with cmdstanr are compiled once and the executable is reused in later R sessions. The cache is in `tools::R_user_dir("stanAnimal", "cache")` by default; change it with `options(stanAnimal.cache_dir = "path")` or the `STANANIMAL_CACHE_DIR` environment variable. Use `stan_cache_dir()` to see the location, and run `stanAnimal_clear_cache()` after upgrading CmdStan.
+
 ## Other options
 
 - `cmd_stan = FALSE` uses `rstan` instead of `cmdstanr`.

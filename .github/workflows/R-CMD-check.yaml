@@ -21,6 +21,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      STANANIMAL_CACHE_DIR: ${{ runner.temp }}/stan-cache
 
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +40,12 @@ jobs:
       - name: Install CmdStan
         run: cmdstanr::install_cmdstan(cores = 2)
         shell: Rscript {0}
+
+      - name: Cache compiled Stan models
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/stan-cache
+          key: stan-${{ matrix.os }}-${{ matrix.r }}-${{ hashFiles('package/inst/stan/*.stan') }}
 
       - uses: r-lib/actions/check-r-package@v2
         with:
