@@ -10,6 +10,8 @@
 #' @param iter number of MCMC iterations.
 #' @param warmup number of warmup iterations, must be smaller than iter
 #' @param chains number of chains to run.
+#' @param cores number of chains to run in parallel (cmdstanr only).
+#' @param model_file Optional path to a custom Stan file replacing the default model.
 #' @param control list of stan control arguments.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
@@ -29,24 +31,15 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
                       residual_structure = c("unstructured", "diagonal"), ...){
   residual_structure <- match.arg(residual_structure)
   parametrization <- match.arg(parametrization)
-  if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
-  Y <- as.matrix(Y)
-  X <- as.matrix(X)
+  YX <- .check_response_design(Y, X)
+  Y <- YX$Y
+  X <- YX$X
   A <- as.matrix(A)
 
-  if (!is.numeric(Y) || any(!is.finite(Y)))
-    stop("Y must contain only finite numeric values.")
-  if (!is.numeric(X) || any(!is.finite(X)))
-    stop("X must contain only finite numeric values.")
   if (!is.logical(blend_A) || length(blend_A) != 1L || is.na(blend_A))
     stop("blend_A must be TRUE or FALSE.")
 
   n <- nrow(Y)
-  p <- ncol(X)
-  if (n < 2L || p < 1L || nrow(X) != n)
-    stop("Y and X must have the same number of rows, and X must have columns.")
-  if (qr(X)$rank < p)
-    stop("X must have full column rank.")
   if (!is.numeric(A) || any(!is.finite(A)) || !identical(dim(A), c(n, n)))
     stop("A must be a finite numeric square matrix matching the rows of Y.")
 
@@ -132,6 +125,22 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
     }
   }
   return(fit)
+}
+
+.check_response_design <- function(Y, X) {
+  if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
+  Y <- as.matrix(Y)
+  X <- as.matrix(X)
+  if (!is.numeric(Y) || any(!is.finite(Y)))
+    stop("Y must contain only finite numeric values.")
+  if (!is.numeric(X) || any(!is.finite(X)))
+    stop("X must contain only finite numeric values.")
+  p <- ncol(X)
+  if (nrow(Y) < 2L || p < 1L || nrow(X) != nrow(Y))
+    stop("Y and X must have the same number of rows, and X must have columns.")
+  if (qr(X)$rank < p)
+    stop("X must have full column rank.")
+  list(Y = Y, X = X)
 }
 
 .warn_low_bfmi <- function(fit, threshold = 0.3) {

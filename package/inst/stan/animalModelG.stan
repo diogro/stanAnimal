@@ -89,7 +89,7 @@ model {
   for (n in 1:N)
     Ys[n] ~ multi_normal_cholesky(mu[n], cholesky_decompose(lambda[n] * G + E));
 
-  to_vector(beta_scaled) ~ normal(0, 1);
+  to_vector(beta_scaled) ~ normal(0, 10);
   s_G ~ normal(0, 1);
   s_E ~ normal(0, 1);
   L_Omega_G ~ lkj_corr_cholesky(lkj_prior);

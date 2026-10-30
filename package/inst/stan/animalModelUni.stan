@@ -65,7 +65,7 @@ transformed parameters {
 model {
   Ys ~ normal(Xs * beta_scaled, sqrt(lambda * square(s_G) + square(s_E)));
 
-  beta_scaled ~ normal(0, 1);
+  beta_scaled ~ normal(0, 10);
   s_G ~ normal(0, 1);
   s_E ~ normal(0, 1);
 }

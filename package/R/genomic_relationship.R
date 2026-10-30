@@ -24,7 +24,7 @@
 #'   names of \code{M} on both dimensions. The number of markers used and their
 #'   scaling constant are stored in the attributes \code{n_markers} and
 #'   \code{scale}.
-#' @details The GRM is \code{G = Z Z' / (2 * sum(p * (1 - p)))}, where
+#' @details The GRM is \code{G = Z \%*\% t(Z) / (2 * sum(p * (1 - p)))}, where
 #'   \code{Z = M - 2p}. Missing genotypes are replaced by their expected value
 #'   \code{2p}, so they contribute zero to the relationship. With frequencies
 #'   estimated from the data, the diagonal averages about one plus the

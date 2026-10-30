@@ -9,7 +9,7 @@ Fits use [CmdStan](https://mc-stan.org/cmdstanr/) through `cmdstanr` (default) o
 ```r
 if (!requireNamespace("pak", quietly = TRUE))
     install.packages("pak")
-pak::pkg_install(c("rhdf5", "stan-dev/cmdstanr"))
+pak::pkg_install("stan-dev/cmdstanr")
 cmdstanr::install_cmdstan()
 install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 pak::pkg_install("diogro/stanAnimal/package")
@@ -76,6 +76,15 @@ The multivariate model estimates `G` and the residual covariance `E` directly. E
 - `lkj_prior` sets the LKJ shape for both correlation matrices (default 2; 1 is uniform, larger shrinks toward zero correlation).
 - `residual_structure = "unstructured"` (default) fits a full residual covariance. `"diagonal"` assumes independent residuals, which pushes environmental covariance between traits into `G` and inflates heritability, so it is not recommended when estimating `G`.
 - Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and it only requires `A` to be positive semidefinite.
+
+## Phenotypic covariance only (P)
+
+With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`:
+
+```r
+fit <- lmm_multiCov(Y, X, lkj_prior = 2)
+fit$summary("P")
+```
 
 ## Univariate models
 

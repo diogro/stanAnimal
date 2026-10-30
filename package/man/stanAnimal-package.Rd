@@ -2,15 +2,12 @@
 % Please edit documentation in R/stanAnimal-package.R
 \docType{package}
 \name{stanAnimal-package}
-\alias{stanAnimal}
 \alias{stanAnimal-package}
-\alias{package2}
+\alias{stanAnimal}
 \title{The 'stanAnimal' package.}
 \description{
-A DESCRIPTION OF THE PACKAGE
-}
-\references{
-Stan Development Team (2020). RStan: the R interface to Stan. R package version 2.19.3. https://mc-stan.org
+Bayesian animal models in Stan, focused on estimating the
+additive genetic (G) and phenotypic (P) covariance matrices.
 }
 \author{
 \strong{Maintainer}: Diogo Melo \email{diogro@gmail.com}
@@ -21,3 +18,4 @@ Authors:
 }
 
 }
+\keyword{internal}

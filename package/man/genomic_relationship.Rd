@@ -40,7 +40,7 @@ Computes the VanRaden (2008) genomic relationship matrix (GRM) from biallelic
 marker genotypes, for use as the \code{A} argument of \code{\link{lmm_animal}}.
 }
 \details{
-The GRM is \code{G = Z Z' / (2 * sum(p * (1 - p)))}, where
+The GRM is \code{G = Z \%*\% t(Z) / (2 * sum(p * (1 - p)))}, where
   \code{Z = M - 2p}. Missing genotypes are replaced by their expected value
   \code{2p}, so they contribute zero to the relationship. With frequencies
   estimated from the data, the diagonal averages about one plus the

@@ -42,6 +42,10 @@ lmm_animal(
 
 \item{chains}{number of chains to run.}
 
+\item{cores}{number of chains to run in parallel (cmdstanr only).}
+
+\item{model_file}{Optional path to a custom Stan file replacing the default model.}
+
 \item{control}{list of stan control arguments.}
 
 \item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan.}

@@ -2,41 +2,58 @@
 % Please edit documentation in R/lm_multiCov.R
 \name{lmm_multiCov}
 \alias{lmm_multiCov}
-\title{Fit a bayesian covariance matrix}
+\title{Fit a Bayesian phenotypic covariance matrix}
 \usage{
 lmm_multiCov(
   Y,
   X,
-  LKJ = 4,
+  lkj_prior = 2,
   iter = 3000,
-  warmup = 2000,
+  warmup = floor(iter/2),
   chains = 4,
+  cores = chains,
   control = list(adapt_delta = 0.99),
+  cmd_stan = TRUE,
+  model_file = NULL,
   ...
 )
 }
 \arguments{
-\item{Y}{response variable, univariate or multivariate}
+\item{Y}{Numeric response vector or matrix, with individuals in rows.}
 
-\item{X}{Fixed-effects model matrix. Continuous columns are scaled internally; returned beta draws use original X units.}
+\item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are scaled internally; returned beta draws use original X units.}
 
-\item{LKJ}{parameter of the LKJ prior on the correlations. Higher values result in lower correlations. A LKJ=1 implies uniform prior on the correlations. Default is 4, which tends to give reasonable amount of shrinkage.}
+\item{lkj_prior}{Parameter of the LKJ prior on the correlation matrix. Higher values result in lower correlations, and 1 is uniform. Default is 2.}
 
-\item{iter}{number of MCMC iterations}
+\item{iter}{number of MCMC iterations.}
 
-\item{warmup}{number of warmup iterations, must be smaller than iter}
+\item{warmup}{number of warmup iterations, must be smaller than iter.}
 
-\item{chains}{number of chains to run}
+\item{chains}{number of chains to run.}
 
-\item{control}{list of stan control arguments}
+\item{cores}{number of chains to run in parallel (cmdstanr only).}
 
-\item{...}{additional parameters for Stan sampling}
+\item{control}{list of stan control arguments.}
+
+\item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan.}
+
+\item{model_file}{Optional path to a custom Stan file replacing the default model.}
+
+\item{...}{additional parameters for stan sampling.}
+}
+\value{
+With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{animal_draws}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
 }
 \description{
-Fits a multivariate covariance matrix for the residuals a linear model.
+Estimates the phenotypic covariance matrix \code{P} of one or more traits
+after accounting for fixed effects, for data with no relatedness or genomic
+information. It is the counterpart of \code{\link{lmm_animal}} without the
+genetic component, and uses the same priors, scaling and outputs.
 }
 \details{
-Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. Returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available.
+The model estimates \code{P} as scales times an LKJ-distributed correlation matrix, with half-normal priors on the scales of the standardized responses. Returned quantities (original response scale) are \code{P}, \code{corrP}, \code{sigma_P} and the fixed effects \code{beta[trait,j]}.
+
+Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized.
 }
 \author{
 Diogo Melo
