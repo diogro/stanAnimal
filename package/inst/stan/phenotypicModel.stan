@@ -12,8 +12,10 @@ data {
 transformed data {
   vector[K] y_sd;
   vector[K] y_mean;
+  vector[J] x_center;
   vector[J] x_scale;
   vector[J] x_scale_inv;
+  vector[J] beta_prior_sd;
   array[J] int x_is_constant;
   vector[J] x_constant_value;
   matrix[N, K] Ys;
@@ -35,11 +37,17 @@ transformed data {
     }
     x_is_constant[j] = is_constant;
     x_constant_value[j] = X[1, j];
+    x_center[j] = 0;
     x_scale[j] = 1;
-    if (is_indicator == 0 && sd(X[, j]) > 0)
+    if (is_indicator == 0 && is_constant == 0) {
+      x_center[j] = mean(X[, j]);
       x_scale[j] = sd(X[, j]);
+    }
     x_scale_inv[j] = 1 / x_scale[j];
-    Xs[, j] = X[, j] * x_scale_inv[j];
+    beta_prior_sd[j] = 1;
+    if (is_constant == 1 && x_constant_value[j] != 0)
+      beta_prior_sd[j] = 2.5 / abs(x_constant_value[j]);
+    Xs[, j] = (X[, j] - x_center[j]) * x_scale_inv[j];
   }
 }
 parameters {
@@ -52,8 +60,16 @@ transformed parameters {
   for (k in 1:K) {
     for (j in 1:J) {
       beta[k, j] = y_sd[k] * beta_scaled[k, j] * x_scale_inv[j];
-      if (x_is_constant[j] == 1 && x_constant_value[j] != 0)
-        beta[k, j] += y_mean[k] / x_constant_value[j];
+    }
+  }
+  for (k in 1:K) {
+    for (j in 1:J) {
+      if (x_is_constant[j] == 1 && x_constant_value[j] != 0) {
+        real center_shift = 0;
+        for (m in 1:J)
+          center_shift += x_center[m] * beta[k, m];
+        beta[k, j] += (y_mean[k] - center_shift) / x_constant_value[j];
+      }
     }
   }
 }
@@ -64,7 +80,9 @@ model {
   for (n in 1:N)
     Ys[n] ~ multi_normal_cholesky(mu[n], L_P);
 
-  to_vector(beta_scaled) ~ normal(0, 10);
+  for (k in 1:K)
+    for (j in 1:J)
+      beta_scaled[k, j] ~ normal(0, beta_prior_sd[j]);
   s_P ~ normal(0, 1);
   L_Omega_P ~ lkj_corr_cholesky(lkj_prior);
 }

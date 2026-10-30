@@ -13,8 +13,10 @@ transformed data {
   matrix[N, N] Q = eigenvectors_sym(A);
   real y_sd = sd(Y);
   real y_mean = mean(Y);
+  vector[J] x_center;
   vector[J] x_scale;
   vector[J] x_scale_inv;
+  vector[J] beta_prior_sd;
   array[J] int x_is_constant;
   vector[J] x_constant_value;
   vector[N] Ys;
@@ -39,11 +41,17 @@ transformed data {
       }
       x_is_constant[j] = is_constant;
       x_constant_value[j] = X[1, j];
+      x_center[j] = 0;
       x_scale[j] = 1;
-      if (is_indicator == 0 && sd(X[, j]) > 0)
+      if (is_indicator == 0 && is_constant == 0) {
+        x_center[j] = mean(X[, j]);
         x_scale[j] = sd(X[, j]);
+      }
       x_scale_inv[j] = 1 / x_scale[j];
-      X_std[, j] = X[, j] * x_scale_inv[j];
+      beta_prior_sd[j] = 1;
+      if (is_constant == 1 && x_constant_value[j] != 0)
+        beta_prior_sd[j] = 2.5 / abs(x_constant_value[j]);
+      X_std[, j] = (X[, j] - x_center[j]) * x_scale_inv[j];
     }
     Ys = Q' * ((Y - y_mean) / y_sd);
     Xs = Q' * X_std;
@@ -58,14 +66,19 @@ transformed parameters {
   vector[J] beta; // fixed effects on original predictor and response scales
   for (j in 1:J) {
     beta[j] = y_sd * beta_scaled[j] * x_scale_inv[j];
-    if (x_is_constant[j] == 1 && x_constant_value[j] != 0)
-      beta[j] += y_mean / x_constant_value[j];
+  }
+  for (j in 1:J) {
+    if (x_is_constant[j] == 1 && x_constant_value[j] != 0) {
+      real center_shift = dot_product(x_center, beta);
+      beta[j] += (y_mean - center_shift) / x_constant_value[j];
+    }
   }
 }
 model {
   Ys ~ normal(Xs * beta_scaled, sqrt(lambda * square(s_G) + square(s_E)));
 
-  beta_scaled ~ normal(0, 10);
+  for (j in 1:J)
+    beta_scaled[j] ~ normal(0, beta_prior_sd[j]);
   s_G ~ normal(0, 1);
   s_E ~ normal(0, 1);
 }

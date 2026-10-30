@@ -119,7 +119,7 @@ G_hat = post_mean("G")
 E_hat = post_mean("E")
 round(G_hat, 2); round(G, 2)
 round(E_hat, 2); round(E, 2)
-round(cov2cor(post_mean("P")), 2)
+round(cov2cor(post_mean("P")), 2); round(cov2cor(G + E), 2)
 
 # Fixed effects, original scale: rows are traits, as in t(beta)
 beta_hat = stan_model$summary("beta", "mean")$mean
@@ -164,4 +164,4 @@ corrplot.mixed(cor(a), upper = "ellipse")      # realized breeding values
 corrplot.mixed(post_mean("corrG"), upper = "ellipse")
 corrplot.mixed(corrG, upper = "ellipse")       # truth
 par(mfrow = c(1, 1))
-
+dev.off()
