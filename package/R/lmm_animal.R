@@ -4,28 +4,31 @@
 #' @param Y response variable, univariate or multivariate
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.
-#' @param lkj_prior Parameter of the prior on the correlations. Larger means more shrinkage.
-#' @param beta_prior Parameters of the beta prior on h2. Used only by the univariate model; the multivariate model parametrizes G and E directly and has no prior on h2.
+#' @param lkj_prior Parameter of the LKJ prior on the correlation matrices of the multivariate model. Larger means more shrinkage.
+#' @param beta_prior Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.
+#' @param parametrization Univariate models only. \code{"variance"} (default) estimates the genetic and residual standard deviations with half-normal priors and derives h2. \code{"h2"} estimates a total standard deviation and h2 with a beta prior (\code{beta_prior}). If the variance version shows low E-BFMI, a warning suggests switching to \code{"h2"}. Ignored for multivariate fits.
 #' @param iter number of MCMC iterations.
 #' @param warmup number of warmup iterations, must be smaller than iter
 #' @param chains number of chains to run.
 #' @param control list of stan control arguments.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
-#' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured" (full covariance between traits). With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance, so "unstructured" is recommended when estimating G.
+#' @param residual_structure Residual covariance for multivariate fits: "unstructured" (default, full covariance between traits) or "diagonal". With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance and inflate heritability, so "unstructured" is recommended when estimating G.
 #' @param ... additional parameters for stan sampling
 #' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{animal_draws}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
-#' @details The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects and only requires \code{A} to be positive semidefinite. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
+#' @details The models estimate the additive genetic and residual standard deviations (\code{sigma_G}, \code{sigma_E}) directly, with half-normal priors on the standardized response scale, and report \code{h2} as a derived quantity; there is no prior on h2 itself. The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects and only requires \code{A} to be positive semidefinite. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
 #'
-#' Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled} and a free total variance on the standardized scale.
+#' Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled}.
 #' @export
 #' @author Diogo Melo
-lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4), 
+lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
+                      parametrization = c("variance", "h2"),
                       iter = 3000, warmup = floor(iter/2), 
                       chains = 4, cores = chains, model_file = NULL, control = list(adapt_delta = 0.99), 
                       cmd_stan = TRUE, blend_A = FALSE,
-                      residual_structure = c("diagonal", "unstructured"), ...){
+                      residual_structure = c("unstructured", "diagonal"), ...){
   residual_structure <- match.arg(residual_structure)
+  parametrization <- match.arg(parametrization)
   if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
   Y <- as.matrix(Y)
   X <- as.matrix(X)
@@ -75,13 +78,12 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                      N = nrow(Y),
                      X = X,
                      Y = as.numeric(Y),
-                     A = A,
-                     lkj_prior =  lkj_prior, 
-                     beta_prior= beta_prior)
+                     A = A)
+    uni_file <- if(parametrization == "h2") "animalModelUniH2.stan" else "animalModelUni.stan"
+    if(parametrization == "h2")
+      stan_data$beta_prior <- beta_prior
+    model_code <- .read_animal_model_code(model_file, uni_file)
     if(cmd_stan){
-      model_code = if(is.null(model_file))
-        stanmodels$animalModelUni@model_code else
-          .read_animal_model_code(model_file, "animalModelUni.stan")
       fit = cstan(model_code = model_code,
                   data = stan_data,
                   iter = iter, warmup = warmup, chains = chains, cores = cores,
@@ -89,19 +91,17 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
       attr(fit, "x_names") <- colnames(X)
     }
     else {
-      model_code <- if (is.null(model_file))
-        stanmodels$animalModelUni@model_code else
-          .read_animal_model_code(model_file, "animalModelUni.stan")
       model <- .get_rstan_model(
         model_code,
-        "animalModelUni_runtime",
-        if (is.null(model_file)) "animalModelUni" else NULL
+        paste0(sub("\\.stan$", "", uni_file), "_runtime"),
+        if (is.null(model_file)) sub("\\.stan$", "", uni_file) else NULL
       )
       fit = rstan::sampling(model, data = stan_data,
                             iter = iter, warmup = warmup, chains = chains, control = control, ...)
-    }
-    if(!cmd_stan)
       fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
+    }
+    if(parametrization == "variance")
+      .warn_low_bfmi(fit)
   } else{
     stan_data = list(K = ncol(Y),
                      J = ncol(X),
@@ -132,6 +132,20 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
     }
   }
   return(fit)
+}
+
+.warn_low_bfmi <- function(fit, threshold = 0.3) {
+  bfmi <- tryCatch(
+    if (inherits(fit, "stanfit")) rstan::get_bfmi(fit) else
+      fit$diagnostic_summary(quiet = TRUE)$ebfmi,
+    error = function(e) NULL)
+  if (length(bfmi) && any(bfmi < threshold, na.rm = TRUE))
+    warning(sum(bfmi < threshold, na.rm = TRUE), " of ", length(bfmi),
+            " chains had E-BFMI below ", threshold, ". The variance ",
+            "parametrization can sample poorly when the genetic variance is ",
+            "weakly identified; consider parametrization = \"h2\".",
+            call. = FALSE)
+  invisible(fit)
 }
 
 .beta_names <- function(x_names, n_traits) {

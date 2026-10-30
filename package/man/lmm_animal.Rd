@@ -9,7 +9,8 @@ lmm_animal(
   X,
   A,
   lkj_prior = 2,
-  beta_prior = c(2, 4),
+  beta_prior = c(1, 1),
+  parametrization = c("variance", "h2"),
   iter = 3000,
   warmup = floor(iter/2),
   chains = 4,
@@ -18,7 +19,7 @@ lmm_animal(
   control = list(adapt_delta = 0.99),
   cmd_stan = TRUE,
   blend_A = FALSE,
-  residual_structure = c("diagonal", "unstructured"),
+  residual_structure = c("unstructured", "diagonal"),
   ...
 )
 }
@@ -29,9 +30,11 @@ lmm_animal(
 
 \item{A}{Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.}
 
-\item{lkj_prior}{Parameter of the prior on the correlations. Larger means more shrinkage.}
+\item{lkj_prior}{Parameter of the LKJ prior on the correlation matrices of the multivariate model. Larger means more shrinkage.}
 
-\item{beta_prior}{Parameter of the beta prior on the h2.}
+\item{beta_prior}{Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.}
+
+\item{parametrization}{Univariate models only. \code{"variance"} (default) estimates the genetic and residual standard deviations with half-normal priors and derives h2. \code{"h2"} estimates a total standard deviation and h2 with a beta prior (\code{beta_prior}). If the variance version shows low E-BFMI, a warning suggests switching to \code{"h2"}. Ignored for multivariate fits.}
 
 \item{iter}{number of MCMC iterations.}
 
@@ -45,7 +48,7 @@ lmm_animal(
 
 \item{blend_A}{If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.}
 
-\item{residual_structure}{Residual covariance for multivariate fits: "diagonal" or "unstructured".}
+\item{residual_structure}{Residual covariance for multivariate fits: "unstructured" (default, full covariance between traits) or "diagonal". With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance and inflate heritability, so "unstructured" is recommended when estimating G.}
 
 \item{...}{additional parameters for stan sampling}
 }
@@ -56,7 +59,9 @@ With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \cod
 Fits a univariate or multivariate linear mixed animal model using a know relatedness matrix
 }
 \details{
-Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled} and a free total variance on the standardized scale.
+The models estimate the additive genetic and residual standard deviations (\code{sigma_G}, \code{sigma_E}) directly, with half-normal priors on the standardized response scale, and report \code{h2} as a derived quantity; there is no prior on h2 itself. The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects and only requires \code{A} to be positive semidefinite. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
+
+Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled}.
 }
 \author{
 Diogo Melo
