@@ -52,6 +52,9 @@ lmm_animal(
 \description{
 Fits a univariate or multivariate linear mixed animal model using a know relatedness matrix
 }
+\details{
+Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The univariate model uses the response SD to set the scaled coefficient prior.
+}
 \author{
 Diogo Melo
 }

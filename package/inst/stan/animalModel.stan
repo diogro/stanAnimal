@@ -14,7 +14,30 @@ transformed data{
   vector[K] y_var;
   vector[K] y_mean;
   array[N] vector[K] Y_std; // response variable
+  vector[J] x_scale;
+  vector[J] x_scale_inv;
+  array[J] int x_is_constant;
+  vector[J] x_constant_value;
   LA = cholesky_decompose(A);
+
+  for(j in 1:J){
+    vector[N] x_j;
+    int is_indicator = 1;
+    int is_constant = 1;
+    for(n in 1:N){
+      x_j[n] = X[n][j];
+      if(X[n][j] != X[1][j])
+        is_constant = 0;
+      if(X[n][j] != 0 && X[n][j] != 1)
+        is_indicator = 0;
+    }
+    x_is_constant[j] = is_constant;
+    x_constant_value[j] = X[1][j];
+    x_scale[j] = 1;
+    if(is_indicator == 0 && sd(x_j) > 0)
+      x_scale[j] = sd(x_j);
+  }
+  x_scale_inv = 1 ./ x_scale;
 
   for(k in 1:K){
     y_sd[k] = sd(Y[,k]);
@@ -24,7 +47,7 @@ transformed data{
   }
 }
 parameters {
-  matrix[K, J]    beta; // fixed effects
+  matrix[K, J]    beta_scaled; // fixed effects on scaled predictors
   matrix[N, K] a_tilde; // breeding values precursor
   vector<lower=0, upper = 1>[K] h2; //variance partition
 
@@ -37,9 +60,17 @@ parameters {
 }
 transformed parameters {
   matrix[N, K] a;
+  matrix[K, J] beta; // fixed effects on original predictor scales
   vector<lower=0>[K] L_sigma_G;
   vector<lower=0>[K] L_sigma_R;
 
+  for(k in 1:K){
+    for(j in 1:J){
+      beta[k,j] = y_sd[k] * beta_scaled[k,j] * x_scale_inv[j];
+      if(x_is_constant[j] == 1 && x_constant_value[j] != 0)
+        beta[k,j] += y_mean[k] / x_constant_value[j];
+    }
+  }
   for(k in 1:K){
     L_sigma_G[k] = L_sigma[k] * sqrt(h2[k]);
     L_sigma_R[k] = L_sigma[k] * sqrt(1-h2[k]);
@@ -50,11 +81,11 @@ model {
     array[N] vector[K] mu;
 
     for(n in 1:N){
-      mu[n] = beta * X[n] + to_vector(a[n]);
+      mu[n] = beta_scaled * (X[n] ./ x_scale) + to_vector(a[n]);
       Y_std[n] ~ normal(mu[n], L_sigma_R);
     }
 
-    to_vector(beta) ~ normal(0, 1);
+    to_vector(beta_scaled) ~ normal(0, 1);
     to_vector(a_tilde) ~ normal(0, 1);
     h2 ~ beta(beta_prior[1], beta_prior[2]);
     L_sigma ~ normal(0, 0.5);

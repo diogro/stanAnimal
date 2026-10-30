@@ -18,7 +18,7 @@ lmm_multiCov(
 \arguments{
 \item{Y}{response variable, univariate or multivariate}
 
-\item{X}{fixed model matrix}
+\item{X}{Fixed-effects model matrix. Continuous columns are scaled internally; returned beta draws use original X units.}
 
 \item{LKJ}{parameter of the LKJ prior on the correlations. Higher values result in lower correlations. A LKJ=1 implies uniform prior on the correlations. Default is 4, which tends to give reasonable amount of shrinkage.}
 
@@ -34,6 +34,9 @@ lmm_multiCov(
 }
 \description{
 Fits a multivariate covariance matrix for the residuals a linear model.
+}
+\details{
+Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. Returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available.
 }
 \author{
 Diogo Melo

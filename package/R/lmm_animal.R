@@ -2,7 +2,7 @@
 #' 
 #' Fits a univariate or multivariate linear mixed animal model using a know relatedness matrix
 #' @param Y response variable, univariate or multivariate
-#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank.
+#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.
 #' @param lkj_prior Parameter of the prior on the correlations. Larger means more shrinkage.
 #' @param beta_prior Parameter of the beta prior on the h2. 
@@ -14,6 +14,7 @@
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
 #' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured".
 #' @param ... additional parameters for stan sampling
+#' @details Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The univariate model uses the response SD to set the scaled coefficient prior.
 #' @export
 #' @author Diogo Melo
 lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4), 
@@ -84,12 +85,19 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                   iter = iter, warmup = warmup, chains = chains, cores = cores,
                   control = control, ...)
     }
-    else
-      fit = rstan::sampling(stanmodels$animalModelUni, data = stan_data,
+    else {
+      model_code <- if (is.null(model_file))
+        stanmodels$animalModelUni@model_code else
+          .read_animal_model_code(model_file, "diagonal")
+      model <- .get_rstan_model(
+        model_code,
+        "animalModelUni_runtime",
+        if (is.null(model_file)) "animalModelUni" else NULL
+      )
+      fit = rstan::sampling(model, data = stan_data,
                             iter = iter, warmup = warmup, chains = chains, control = control, ...)
-    if(!is.null(colnames(X))){
-      names(fit)[grep("beta", names(fit))] = colnames(X)
     }
+    fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
     fit = new("animalUni", fit)
   } else{
     stan_data = list(K = ncol(Y),
@@ -110,25 +118,41 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                   iter = iter, warmup = warmup, chains = chains , cores = cores, 
                   control=control , ...)
     } else {
-      if(is.null(model_file) && residual_structure == "diagonal") {
-        model = stanmodels$animalModel
-      } else {
-        model_code = .read_animal_model_code(model_file, residual_structure)
-        model = rstan::stan_model(
-          model_code = model_code,
-          model_name = if (residual_structure == "unstructured") "animalModelCorR" else "animalModel"
-        )
-      }
+      model_code <- if (is.null(model_file) && residual_structure == "diagonal")
+        stanmodels$animalModel@model_code else
+          .read_animal_model_code(model_file, residual_structure)
+      cache_key <- if (is.null(model_file))
+        paste0("animalModel_", residual_structure) else NULL
+      model <- .get_rstan_model(
+        model_code,
+        paste0("animalModel_", residual_structure, "_runtime"),
+        cache_key
+      )
       fit = rstan::sampling(model,
                             data = stan_data, 
                             iter = iter, warmup = warmup, chains = chains, 
                             control = control, ...)
     }
-    if(!is.null(colnames(X))){
-      names(fit)[grep("beta", names(fit))] = colnames(X)
-    }
+    fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
   }
   return(fit)
+}
+
+.rename_fixed_effect_draws <- function(fit, X, n_traits) {
+  if (is.null(colnames(X)))
+    return(fit)
+
+  beta_indices <- grep("^beta\\[", names(fit))
+  if (n_traits == 1L) {
+    beta_names <- colnames(X)
+  } else {
+    beta_names <- unlist(lapply(seq_len(ncol(X)), function(j) {
+      paste0("beta[", seq_len(n_traits), ",", colnames(X)[j], "]")
+    }), use.names = FALSE)
+  }
+  if (length(beta_indices) == length(beta_names))
+    names(fit)[beta_indices] <- beta_names
+  fit
 }
 
 .read_animal_model_code <- function(model_file, residual_structure) {
@@ -145,6 +169,26 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
   if (is.na(model_path) || !file.exists(model_path))
     stop("Could not locate the requested Stan model source.")
   paste(readLines(model_path, warn = FALSE), collapse = "\n")
+}
+
+.rstan_model_cache <- new.env(parent = emptyenv())
+
+.get_rstan_model <- function(model_code, model_name, cache_key = NULL) {
+  if (!is.null(cache_key) && exists(cache_key, envir = .rstan_model_cache,
+                                    inherits = FALSE)) {
+    cached <- get(cache_key, envir = .rstan_model_cache, inherits = FALSE)
+    if (identical(cached$code, model_code))
+      return(cached$model)
+    model_name <- basename(tempfile(paste0(model_name, "_")))
+  } else if (is.null(cache_key)) {
+    model_name <- basename(tempfile(paste0(model_name, "_")))
+  }
+
+  model <- rstan::stan_model(model_code = model_code, model_name = model_name)
+  if (!is.null(cache_key))
+    assign(cache_key, list(code = model_code, model = model),
+           envir = .rstan_model_cache)
+  model
 }
 
 setClass("animalUni",    contains = "stanfit")
