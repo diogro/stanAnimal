@@ -43,7 +43,7 @@ parameters {
   vector[N]  a_tilde; // breeding values
   row_vector[J] beta_scaled; // fixed effects on scaled predictors
   real<lower=0, upper = 1> h2; // variance partition
-
+  real<lower=0> sigma; // total residual + genetic sd on the standardized scale
 }
 transformed parameters {
   row_vector[J] beta; // fixed effects on original predictor scales
@@ -58,20 +58,21 @@ model {
     vector[N] a;
     
     a_tilde ~ normal(0, 1);
-    a = sqrt(h2) * (LA * a_tilde);
+    a = sigma * sqrt(h2) * (LA * a_tilde);
  
     for(n in 1:N)
       mu[n] = beta_scaled * (X[n] ./ x_scale) + a[n];
 
-    Y_std ~ normal(mu, sqrt(1 - h2));
+    Y_std ~ normal(mu, sigma * sqrt(1 - h2));
 
     to_vector(beta_scaled) ~ normal(0, 1);
     h2 ~ beta(2, 4);
+    sigma ~ normal(0, 0.5);
 
 }
 generated quantities{
   real sigma_E;
   real sigma_G;
-  sigma_E = square(y_sd) * (1 - h2);
-  sigma_G = square(y_sd) * h2;
+  sigma_E = square(y_sd * sigma) * (1 - h2);
+  sigma_G = square(y_sd * sigma) * h2;
 }
