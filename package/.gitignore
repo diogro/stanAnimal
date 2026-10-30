@@ -1,2 +1,8 @@
 .Rproj.user
 *.o
+
+# Compiled CmdStan models (executables and generated C++ next to the .stan files)
+inst/stan/*
+!inst/stan/*.stan
+!inst/stan/include/
+inst/stan/*.hpp

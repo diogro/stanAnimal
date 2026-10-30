@@ -1,71 +1,30 @@
-# functions for working with cmdstan and cmdstanr
-# Copied from: https://github.com/rmcelreath/rethinking/commit/89cf75eed610d9177ad9e1512b249434dcb6f026?branch=89cf75eed610d9177ad9e1512b249434dcb6f026&diff=unified
+# Helpers for fitting Stan models with cmdstanr.
+# Adapted from rethinking (https://github.com/rmcelreath/rethinking).
 
-# write model code as character vector to file, so cmdstan_model can read it
-cmdstanr_model_write <- function( the_model ) {
-        # make temp name from model code md5 hash
-        require( digest , quietly=TRUE )
-        file_patt <- file.path( tempdir() , 
-                                paste("rt_cmdstanr_",digest(the_model,"md5"), 
-                                      collapse = "", sep = "" ) )
-        #file <- tempfile("ulam_cmdstanr",fileext=".stan")
-        file_stan <- paste( file_patt , ".stan", collapse = "", sep = "" )
-        fileConn <- file( file_stan )
-        writeLines( the_model , fileConn )
-        close(fileConn)
-        return(file_stan)
-    }
+# Fit a model from Stan code using cmdstanr and return the CmdStanMCMC object.
+# The result works directly with posterior (fit$draws()) and bayesplot
+# (e.g. bayesplot::mcmc_trace(fit$draws("beta")), bayesplot::nuts_params(fit)).
+cstan <- function(model_code, data = list(), chains = 1, cores = 1, iter = 1000,
+                  warmup = floor(iter / 2), threads = 1,
+                  control = list(adapt_delta = 0.95), cpp_options = list(), ...) {
+  if (threads > 1) cpp_options[["stan_threads"]] <- TRUE
 
-# wrapper to fit stan model using cmdstanr and return rstan stanfit object
-cstan <- function( file , model_code , data=list() , chains=1 , cores=1 , iter=1000 , warmup , threads=1 , control=list(adapt_delta=0.95) , cpp_options=list() , save_warmup=TRUE , ... ) {
+  stan_file <- cmdstanr::write_stan_file(model_code, dir = tempdir())
+  mod <- cmdstanr::cmdstan_model(stan_file, cpp_options = cpp_options)
 
-    if ( threads>1 ) cpp_options[['stan_threads']] <- TRUE
+  adapt_delta <- if (is.null(control[["adapt_delta"]])) 0.95 else
+    as.numeric(control[["adapt_delta"]])
+  max_treedepth <- if (is.null(control[["max_treedepth"]])) 11 else
+    as.numeric(control[["max_treedepth"]])
 
-    if ( missing(file) & !missing(model_code) ) {
-        file <- cmdstanr_model_write( model_code )
-    }
-
-    require(cmdstanr,quietly=TRUE)
-    mod <- cmdstan_model( file , compile=TRUE , cpp_options=cpp_options )
-
-    if ( missing(warmup) ) {
-        samp <- floor(iter/2)
-        warm <- floor(iter/2)
-    } else {
-        samp <- iter - warmup
-        warm <- warmup
-    } 
-
-    # pull out any control arguments
-    carg_adapt_delta <- 0.95
-    if ( !is.null( control[['adapt_delta']] ) )
-        carg_adapt_delta <- as.numeric(control[['adapt_delta']])
-    carg_max_treedepth <- 11
-    if ( !is.null( control[['max_treedepth']] ) )
-        carg_max_treedepth <- as.numeric(control[['max_treedepth']])
-
-    # sample
-    if ( threads > 1 )
-        cmdstanfit <- mod$sample( data=data , 
-            chains=chains , 
-            parallel_chains=cores , 
-            iter_sampling=samp , iter_warmup=warm , 
-            adapt_delta=carg_adapt_delta , 
-            max_treedepth=carg_max_treedepth , 
-            threads_per_chain=threads ,
-            save_warmup=save_warmup , ... )
-    else
-        cmdstanfit <- mod$sample( data=data , 
-            chains=chains , 
-            parallel_chains=cores , 
-            iter_sampling=samp , iter_warmup=warm , 
-            adapt_delta=carg_adapt_delta , 
-            max_treedepth=carg_max_treedepth ,
-            save_warmup=save_warmup , ... )
-
-    # coerce to stanfit object
-    stanfit <- rstan::read_stan_csv(cmdstanfit$output_files())
-
-    return(stanfit)
+  args <- list(data = data,
+               chains = chains,
+               parallel_chains = cores,
+               iter_warmup = warmup,
+               iter_sampling = iter - warmup,
+               adapt_delta = adapt_delta,
+               max_treedepth = max_treedepth)
+  if (threads > 1) args$threads_per_chain <- threads
+  args <- utils::modifyList(args, list(...))
+  do.call(mod$sample, args)
 }
-

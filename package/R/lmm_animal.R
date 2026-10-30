@@ -10,11 +10,12 @@
 #' @param warmup number of warmup iterations, must be smaller than iter
 #' @param chains number of chains to run.
 #' @param control list of stan control arguments.
-#' @param cmd_stan Logical, use cmd_stan. If false, uses rstan.
+#' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
 #' @param residual_structure Residual covariance for multivariate fits: "diagonal" or "unstructured".
 #' @param ... additional parameters for stan sampling
-#' @details Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The univariate model uses the response SD to set the scaled coefficient prior.
+#' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{animal_draws}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
+#' @details Continuous predictors are divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not scaled. The returned \code{beta} coefficients are backtransformed to original predictor and response units; \code{beta_scaled} draws are also available. The response is centered and standardized in all models (including univariate), with a standard normal prior on \code{beta_scaled} and a free total variance on the standardized scale.
 #' @export
 #' @author Diogo Melo
 lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4), 
@@ -62,7 +63,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
     stop("A must be positive definite for Stan; set blend_A = TRUE to regularize it.")
 
   if(cmd_stan)
-    if(!"cmdstanr" %in% installed.packages()[,"Package"]){
+    if(!requireNamespace("cmdstanr", quietly = TRUE)){
       warning("cmdstanr not installed, falling back to rstan.\nInstall cmdstanr using remotes::install_github(\"stan-dev/cmdstanr)\".\nNext, run cmdstanr::install_cmdstan().")
       cmd_stan = FALSE
     }
@@ -76,14 +77,14 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                      lkj_prior =  lkj_prior, 
                      beta_prior= beta_prior)
     if(cmd_stan){
-      if(is.null(model_file))
-        model_code = stanmodels$animalModelUni@model_code
-      else
-        model_code = readChar(model_file, 1e5)
+      model_code = if(is.null(model_file))
+        stanmodels$animalModelUni@model_code else
+          .read_animal_model_code(model_file, "diagonal")
       fit = cstan(model_code = model_code,
                   data = stan_data,
                   iter = iter, warmup = warmup, chains = chains, cores = cores,
                   control = control, ...)
+      attr(fit, "x_names") <- colnames(X)
     }
     else {
       model_code <- if (is.null(model_file))
@@ -97,8 +98,8 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
       fit = rstan::sampling(model, data = stan_data,
                             iter = iter, warmup = warmup, chains = chains, control = control, ...)
     }
-    fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
-    fit = new("animalUni", fit)
+    if(!cmd_stan)
+      fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
   } else{
     stan_data = list(K = ncol(Y),
                      J = ncol(X),
@@ -117,6 +118,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                   data = stan_data, 
                   iter = iter, warmup = warmup, chains = chains , cores = cores, 
                   control=control , ...)
+      attr(fit, "x_names") <- colnames(X)
     } else {
       model_code <- if (is.null(model_file) && residual_structure == "diagonal")
         stanmodels$animalModel@model_code else
@@ -133,9 +135,18 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
                             iter = iter, warmup = warmup, chains = chains, 
                             control = control, ...)
     }
-    fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
+    if(!cmd_stan)
+      fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
   }
   return(fit)
+}
+
+.beta_names <- function(x_names, n_traits) {
+  if (n_traits == 1L)
+    return(list(old = paste0("beta[", seq_along(x_names), "]"), new = paste0("beta[", x_names, "]")))
+  grid <- expand.grid(trait = seq_len(n_traits), j = seq_along(x_names))
+  list(old = paste0("beta[", grid$trait, ",", grid$j, "]"),
+       new = paste0("beta[", grid$trait, ",", x_names[grid$j], "]"))
 }
 
 .rename_fixed_effect_draws <- function(fit, X, n_traits) {
@@ -143,16 +154,38 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
     return(fit)
 
   beta_indices <- grep("^beta\\[", names(fit))
-  if (n_traits == 1L) {
-    beta_names <- colnames(X)
-  } else {
-    beta_names <- unlist(lapply(seq_len(ncol(X)), function(j) {
-      paste0("beta[", seq_len(n_traits), ",", colnames(X)[j], "]")
-    }), use.names = FALSE)
-  }
+  beta_names <- .beta_names(colnames(X), n_traits)$new
   if (length(beta_indices) == length(beta_names))
     names(fit)[beta_indices] <- beta_names
   fit
+}
+
+#' Posterior draws with named fixed effects
+#'
+#' Returns draws from a \code{lmm_animal} fit made with \code{cmd_stan = TRUE},
+#' with the \code{beta} variables named after the columns of \code{X}
+#' (\code{beta[name]} for one trait, \code{beta[trait,name]} for several).
+#' If \code{X} had no column names the draws are returned unchanged.
+#' @param fit A \code{CmdStanMCMC} object returned by \code{lmm_animal}.
+#' @param variables Optional character vector of variables to extract, using
+#'   Stan's names (e.g. \code{"beta"}, \code{"h2"}). Default is all variables.
+#' @param ... Further arguments passed to \code{fit$draws()}, e.g. \code{format}.
+#' @return A \code{posterior} draws object, usable with bayesplot.
+#' @export
+animal_draws <- function(fit, variables = NULL, ...) {
+  draws <- fit$draws(variables = variables, ...)
+  x_names <- attr(fit, "x_names")
+  if (is.null(x_names))
+    return(draws)
+  vars <- posterior::variables(draws)
+  n_traits <- if (any(grepl("^beta\\[[0-9]+,[0-9]+\\]$", vars))) {
+    max(as.integer(sub("^beta\\[([0-9]+),.*", "\\1", grep("^beta\\[[0-9]+,", vars, value = TRUE))))
+  } else 1L
+  map <- .beta_names(x_names, n_traits)
+  hit <- match(vars, map$old)
+  vars[!is.na(hit)] <- map$new[hit[!is.na(hit)]]
+  posterior::variables(draws) <- vars
+  draws
 }
 
 .read_animal_model_code <- function(model_file, residual_structure) {
@@ -190,6 +223,3 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(2, 4),
            envir = .rstan_model_cache)
   model
 }
-
-setClass("animalUni",    contains = "stanfit")
-setClass("animalMulti", contains = "stanfit")

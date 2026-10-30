@@ -20,6 +20,7 @@ library(AtchleyMice)
 #ped <- read.table("volesPED.txt",header=T)
 ped = randomPed(100, 10, seed = 2)
 plot(ped)
+dev.off()
 ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
 ped = prepPed(ped)
 A <- as.matrix(nadiv::makeA(ped))
@@ -50,7 +51,9 @@ beta = matrix(c(1, 2, 3,
 colnames(beta) = c("x", "y", "z")
 rownames(beta) = c("Intercept", "sex", "Z")
 
-sex = as.numeric(as.factor(mice_info$F6$Sex))-1
+
+#sex = as.numeric(as.factor(mice_info$F6$Sex))-1
+sex = sample(c(0,1), nrow(a), replace = TRUE)
 sex = sex[1:nrow(a)]
 Z = rnorm(nrow(a))
 Intercept = rep(1, nrow(a))

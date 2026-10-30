@@ -26,4 +26,4 @@ LinkingTo:
     StanHeaders (>= 2.18.0),
     rstan (>= 2.18.1)
 SystemRequirements: GNU make
-RoxygenNote: 7.1.1
+Config/roxygen2/version: 8.1.1

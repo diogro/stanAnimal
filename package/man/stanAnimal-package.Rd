@@ -2,6 +2,7 @@
 % Please edit documentation in R/stanAnimal-package.R
 \docType{package}
 \name{stanAnimal-package}
+\alias{stanAnimal}
 \alias{stanAnimal-package}
 \alias{package2}
 \title{The 'stanAnimal' package.}
@@ -10,4 +11,13 @@ A DESCRIPTION OF THE PACKAGE
 }
 \references{
 Stan Development Team (2020). RStan: the R interface to Stan. R package version 2.19.3. https://mc-stan.org
+}
+\author{
+\strong{Maintainer}: Diogo Melo \email{diogro@gmail.com}
+
+Authors:
+\itemize{
+  \item Diogo Melo \email{diogro@gmail.com}
+}
+
 }

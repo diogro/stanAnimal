@@ -21,9 +21,10 @@ individual order as \code{Y} and \code{X}.}
 \item{thin}{Keep every \code{thin}th iteration after burn-in.}
 }
 \value{
-A list of posterior draws: \code{G} and \code{R} are covariance arrays,
-\code{beta} contains fixed-effect matrix draws, \code{h2} contains trait-wise
-variance ratios, and \code{iterations} gives the retained iteration numbers.
+A list of posterior draws: \code{G} and \code{R} are covariance
+  arrays, \code{beta} contains fixed-effect matrix draws, \code{h2}
+  contains trait-wise variance ratios, and \code{iterations} gives the
+  retained iteration numbers.
 }
 \description{
 Fits a univariate or multivariate linear animal model with fixed effects and relatedness
@@ -31,9 +32,10 @@ matrix using a single-chain Gibbs sampler. This is intended for quick
 simulations and checks; its priors differ from those in \code{lmm_animal}.
 }
 \details{
-Fixed effects have an improper flat prior. Genetic and residual covariance
-matrices have inverse-Wishart priors with degrees of freedom \code{K + 1} and
-scale matrix \code{(K + 1) I / 2}, where \code{K} is the number of traits.
-These differ from the priors used by \code{lmm_animal}; the resulting
-posterior draws are not directly interchangeable.
+Fixed effects have an improper flat prior. Genetic and residual
+  covariance matrices have inverse-Wishart priors with degrees of freedom
+  \code{K + 1} and scale matrix \code{(K + 1) I / 2}, where \code{K} is
+  the number of traits. These differ from the priors used by
+  \code{lmm_animal}; the resulting posterior draws are not directly
+  interchangeable.
 }
