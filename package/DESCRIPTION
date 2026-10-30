@@ -12,6 +12,7 @@ Depends:
 Imports: 
     rstan (>= 2.18.1),
     cmdstanr,
+    ggplot2,
     posterior,
     tools,
     utils

@@ -18,15 +18,15 @@ library(stanAnimal)
 library(AtchleyMice)
 
 #ped <- read.table("volesPED.txt",header=T)
-ped = randomPed(100, 10, seed = 2)
-plot(ped)
-dev.off()
-ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
-ped = prepPed(ped)
-A <- as.matrix(nadiv::makeA(ped))
-#ped <- mice_pedigree
-#F6_ID = mice_info$F6$ID
-#A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
+#ped = randomPed(100, 10, seed = 2)
+#plot(ped)
+#dev.off()
+#ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
+#ped = prepPed(ped)
+#A <- as.matrix(nadiv::makeA(ped))
+ped <- mice_pedigree
+F6_ID = mice_info$F6$ID
+A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
 L_A = chol(A)
 
 corrG <- matrix(c(1, 0.7, 0.2,
@@ -96,6 +96,7 @@ stan_model$summary(c("h2", "G", "E", "corrG"),
 ## Sampler diagnostics (divergences, treedepth, E-BFMI)
 stan_model$diagnostic_summary()
 
+pdf("simulatedAnimal.pdf", width = 8, height = 6)
 # Fixed effects are named after the columns of X: beta[trait, column]
 beta_draws = animal_draws(stan_model, "beta")
 posterior::summarise_draws(beta_draws)
@@ -127,22 +128,24 @@ round(matrix(beta_hat, 3), 2)
 t(beta)
 
 ## Visualization
+# All figures are written to a single PDF
+pdf("simulatedAnimal_plots.pdf", width = 10, height = 7)
 bayesplot::color_scheme_set("blue")
 
 # Traces and densities
-bayesplot::mcmc_trace(stan_model$draws("G"))
-bayesplot::mcmc_trace(stan_model$draws("E"))
-bayesplot::mcmc_dens_overlay(stan_model$draws("h2"))
+print(bayesplot::mcmc_trace(stan_model$draws("G")))
+print(bayesplot::mcmc_trace(stan_model$draws("E")))
+print(bayesplot::mcmc_dens_overlay(stan_model$draws("h2")))
 
 # Convergence and sampler checks
 all_draws = stan_model$draws()
-bayesplot::mcmc_rhat(posterior::summarise_draws(all_draws, "rhat")$rhat)
-bayesplot::mcmc_neff(posterior::summarise_draws(all_draws, "ess_bulk")$ess_bulk /
-                       posterior::ndraws(all_draws))
-bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(stan_model))
+print(bayesplot::mcmc_rhat(posterior::summarise_draws(all_draws, "rhat")$rhat))
+print(bayesplot::mcmc_neff(posterior::summarise_draws(all_draws, "ess_bulk")$ess_bulk /
+                             posterior::ndraws(all_draws)))
+print(bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(stan_model)))
 
 # Fixed effects
-bayesplot::mcmc_intervals(beta_draws)
+print(bayesplot::mcmc_intervals(beta_draws))
 
 # Intervals with the simulated truth as a reference line
 interval_plot = function(pars, truth) {
@@ -151,11 +154,19 @@ interval_plot = function(pars, truth) {
     prob = 0.8, prob_outer = 0.99, point_est = "mean") +
     ggplot2::geom_vline(xintercept = truth)
 }
-interval_plot(c("h2[1]", "h2[2]", "h2[3]"), diag(G) / (diag(G) + diag(E)))
-interval_plot(c("G[1,1]", "G[2,2]", "G[3,3]"), diag(G))
-interval_plot(c("E[1,1]", "E[2,2]", "E[3,3]"), diag(E))
-interval_plot(c("G[1,2]", "G[1,3]", "G[2,3]"), G[lower.tri(G)])
-interval_plot(c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"), corrG[lower.tri(corrG)])
+print(interval_plot(c("h2[1]", "h2[2]", "h2[3]"), diag(G) / (diag(G) + diag(E))))
+print(interval_plot(c("G[1,1]", "G[2,2]", "G[3,3]"), diag(G)))
+print(interval_plot(c("E[1,1]", "E[2,2]", "E[3,3]"), diag(E)))
+print(interval_plot(c("G[1,2]", "G[1,3]", "G[2,3]"), G[lower.tri(G)]))
+print(interval_plot(c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"), corrG[lower.tri(corrG)]))
+
+# Prior versus posterior for heritabilities and genetic correlations
+# (where they overlap, the data add little information)
+print(plot_prior_posterior(stan_model, trait_names = colnames(Y), lkj_prior = 2, ncol = 3))
+print(plot_forest(stan_model, trait_names = colnames(Y), lkj_prior = 2))
+
+# Data with posterior draws of the G ellipses and genetic correlations
+print(plot_G_ellipses(stan_model, Y, n_show = 100))
 
 # Estimated vs simulated genetic correlations
 library(corrplot)
@@ -164,4 +175,7 @@ corrplot.mixed(cor(a), upper = "ellipse")      # realized breeding values
 corrplot.mixed(post_mean("corrG"), upper = "ellipse")
 corrplot.mixed(corrG, upper = "ellipse")       # truth
 par(mfrow = c(1, 1))
+
+# Same plot on screen, after the PDF device is closed
+plot_G_ellipses(stan_model, Y, n_show = 100)
 dev.off()
