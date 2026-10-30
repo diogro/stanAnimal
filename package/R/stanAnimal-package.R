@@ -6,4 +6,5 @@
 #' @name stanAnimal-package
 #' @aliases stanAnimal
 #' @keywords internal
+#' @importFrom ggplot2 .data
 "_PACKAGE"
