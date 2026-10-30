@@ -198,6 +198,8 @@ animal_draws <- function(fit, variables = NULL, ...) {
     max(as.integer(sub("^beta\\[([0-9]+),.*", "\\1", grep("^beta\\[[0-9]+,", vars, value = TRUE))))
   } else 1L
   map <- .beta_names(x_names, n_traits)
+  if (n_traits == 1L && any(grepl("^beta\\[1,[0-9]+\\]$", vars)))
+    map$old <- paste0("beta[1,", seq_along(x_names), "]")
   hit <- match(vars, map$old)
   vars[!is.na(hit)] <- map$new[hit[!is.na(hit)]]
   posterior::variables(draws) <- vars
