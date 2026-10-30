@@ -2,6 +2,7 @@
 
 export(animal_draws)
 export(genAnimalModelInput)
+export(genomic_relationship)
 export(lmm_animal)
 export(lmm_animal_gibbs)
 export(lmm_multiCov)

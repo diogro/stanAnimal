@@ -29,6 +29,18 @@ fit <- lmm_animal(Y, X, A)
 
 `Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive semidefinite.
 
+## Genomic relationship matrix
+
+If you have marker genotypes instead of a pedigree, `genomic_relationship()` builds a VanRaden (2008) GRM to use as `A`:
+
+```r
+# M: individuals in rows, markers in columns, coded 0/1/2 (NA allowed)
+A <- genomic_relationship(M, blend = 0.01)
+fit <- lmm_animal(Y, X, A)
+```
+
+Markers with low minor allele frequency (`maf`), too much missing data (`max_missing`) or no variation are dropped, and missing genotypes are set to their expected value. Known base-population allele frequencies can be passed with `p`. If there are fewer markers than individuals, or duplicated genotypes, the GRM is singular; a small `blend` mixes in the identity to make it positive definite.
+
 ## Output
 
 With the default `cmd_stan = TRUE`, `lmm_animal()` returns a `CmdStanMCMC` object, so the usual cmdstanr, posterior and bayesplot tools work directly:
