@@ -15,6 +15,7 @@ Imports:
     ggplot2,
     grid,
     posterior,
+    stats,
     tools,
     utils
 Suggests:

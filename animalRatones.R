@@ -7,9 +7,19 @@ ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs
 
 # lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
 # there is no relatedness, so no G or breeding values.
-traits = names(dplyr::select(ratonesdf, IS_PM:NA_BR))
-Y = as.matrix(ratonesdf[, traits])
-X = model.matrix(~ SEX + AGE + LIN, data = ratonesdf)
+all_traits = names(ratonesdf)[12:46]
+traits = names(dplyr::select(ratonesdf, IS_PM:PM_ZI))
+
+# animal_design() builds Y (one column per trait) and X from the data frame,
+# so the model can be written as a formula. With many traits the cbind()
+# response is assembled from the column names.
+ratones_formula = stats::reformulate(c("SEX", "AGE", "LIN"),
+                                     response = sprintf("cbind(%s)",
+                                                        paste(traits, collapse = ", ")))
+ratones = animal_design(ratones_formula, data = ratonesdf)
+Y = ratones$Y
+X = ratones$X
+cat(nrow(Y), "individuals,", ncol(Y), "traits,", ncol(X), "fixed effects\n")
 
 cov_fit = lmm_multiCov(Y, X, lkj_prior = 2, chains = 4, iter = 800,
                        control = list(adapt_delta = 0.99))
