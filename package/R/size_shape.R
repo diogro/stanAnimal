@@ -213,7 +213,7 @@ back_transform <- function(fit, transform) {
       G <- B %*% matrix(m[i, in_g], k_model) %*% t(B)
       E <- B %*% matrix(m[i, in_e], k_model) %*% t(B)
       P <- G + E
-      out[i, ] <- c(G, E, P, cov2cor(G)[upper], cov2cor(P)[upper],
+      out[i, ] <- c(G, E, P, stats::cov2cor(G)[upper], stats::cov2cor(P)[upper],
                     diag(G) / diag(P))
     }
   } else {
@@ -224,7 +224,7 @@ back_transform <- function(fit, transform) {
                                     sprintf("sigma_P[%d]", seq_len(k)))))
     for (i in seq_len(nrow(m))) {
       P <- B %*% matrix(m[i, in_p], k_model) %*% t(B)
-      out[i, ] <- c(P, cov2cor(P)[upper], sqrt(diag(P)))
+      out[i, ] <- c(P, stats::cov2cor(P)[upper], sqrt(diag(P)))
     }
   }
   posterior::as_draws_matrix(out)
