@@ -38,3 +38,4 @@ vignettes/*.pdf
 stanAnimal.Rproj
 results/
 Rplots.pdf
+examples/figures/*

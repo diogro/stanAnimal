@@ -50,9 +50,11 @@ round(h2_true, 2)
 
 ## Model fit
 # iter/warmup/thin are counts of Gibbs iterations, not Hamiltonian trajectories,
-# so a few thousand iterations already give a large sample. lmm_animal_gibbs()
-# is fast enough that the whole example runs in a few seconds.
-gibbs <- lmm_animal_gibbs(Y, X, A, iter = 6000, warmup = 2000, thin = 2)
+# so a few thousand retained draws already give a usable sample. Successive
+# draws are autocorrelated, so the effective sample size is much smaller than
+# the number of draws; the example keeps 5000 of 20000 iterations and runs in
+# a few seconds.
+gibbs <- lmm_animal_gibbs(Y, X, A, iter = 20000, warmup = 5000, thin = 3)
 
 # Draws are plain arrays: G and R are k x k x draws, beta is
 # traits x fixed effects x draws, h2 is traits x draws.
