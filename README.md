@@ -124,6 +124,23 @@ The multivariate model estimates `G` and the residual covariance `E` directly. E
 - The per-individual likelihoods are also whitened by the residual Cholesky factor and rotated into a single eigendecomposition of $E^{-1/2}GE^{-1/2}$, so an evaluation costs $O(NK^2 + K^3)$ rather than $O(NK^3)$. The model scales to dozens of traits (e.g. 40) without per-individual Cholesky factorizations. When the eigenvalues of $E^{-1/2}GE^{-1/2}$ are nearly coincident (at initialization, or when `G` is roughly proportional to `E`), the model automatically falls back to a per-individual Cholesky evaluation, whose gradient is well behaved.
 - Fitting many traits is still computationally heavy even though the likelihood is cheap: an unstructured `G` at `K = 40` has roughly 1,700 parameters, and NUTS needs many leapfrog steps, so one fit can take an hour or more. Fewer `iter`, a larger `lkj_prior`, or `residual_structure = "diagonal"` make fits faster.
 
+## Size and shape reparametrization
+
+Morphometric traits are usually dominated by a single size gradient, so their covariance is a long, thin ridge that is slow to sample. `size_shape()` rewrites them as log size plus orthogonal shape axes, and `back_transform()` maps the posterior draws back to the trait scale:
+
+```r
+ss <- size_shape(log_traits)                  # individuals in rows, traits in columns
+dat <- cbind(morphology, ss$scores)           # size, shape1, shape2, ...
+design <- animal_design(cbind(size, shape1, shape2, shape3) ~ sex + site, dat)
+fit <- lmm_animal(design$Y, design$X, A)
+
+post <- back_transform(fit, ss)               # G, E, P, corrG and h2 on the log scale
+posterior::summarise_draws(
+  posterior::subset_draws(post, variable = c("G[1,1]", "corrG[1,2]", "h2[1]")))
+```
+
+Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale.
+
 ## Phenotypic covariance only (P)
 
 With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`. The likelihood is a single whitened triangular solve, $O(NK^2 + K^3)$, so it also scales to dozens of traits:
