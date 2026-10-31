@@ -95,15 +95,18 @@ print.size_shape <- function(x, ...) {
 #'
 #' @param fit A fit returned by \code{\link{lmm_animal}} (a
 #'   \code{CmdStanMCMC} object), or a \code{posterior} draws object, or a matrix
-#'   of draws, containing the variables \code{G} and \code{E}.
+#'   of draws, containing the variables \code{G} and \code{E}, or \code{P} for a
+#'   phenotypic fit from \code{\link{lmm_multiCov}}.
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
-#' @return A \code{draws_matrix} with, for the original \code{k} traits,
-#'   \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]}, \code{corrG[i,j]} (below the
-#'   diagonal) and \code{h2[i]}.
+#' @return A \code{draws_matrix} on the scale of the original traits. For an
+#'   animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
+#'   \code{corrG[i,j]} (below the diagonal) and \code{h2[i]}; for a phenotypic
+#'   fit it holds \code{P[i,j]}, \code{corrP[i,j]} (below the diagonal) and
+#'   \code{sigma_P[i]}.
 #' @details For each draw the covariance matrices are mapped as
 #'   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
-#'   reparametrization of the traits. Heritabilities and genetic correlations
-#'   are then recomputed from the transformed matrices: unlike \eqn{G}, they are
+#'   reparametrization of the traits. Heritabilities and correlations are then
+#'   recomputed from the transformed matrices: unlike the covariance, they are
 #'   not invariant under a change of traits, so the h2 of a shape axis is not
 #'   the h2 of any original trait.
 #'
@@ -128,42 +131,57 @@ back_transform <- function(fit, transform) {
     stop("transform must be a size_shape object from size_shape().",
          call. = FALSE)
   B <- transform$loadings
+  k_model <- ncol(B)
   k <- nrow(B)
 
-  draws <- if (inherits(fit, "CmdStanFit") || (is.list(fit) && is.function(fit$draws)))
-    fit$draws(c("G", "E"))
-  else fit
+  draws <- if (inherits(fit, "CmdStanFit") || (is.list(fit) && is.function(fit$draws))) {
+    variables <- if (is.function(fit$metadata)) fit$metadata()$stan_variables else NULL
+    wanted <- intersect(c("G", "E", "P"), variables %||% c("G", "E", "P"))
+    if (length(wanted)) fit$draws(wanted) else fit$draws()
+  } else fit
   m <- if (inherits(draws, "draws")) unclass(posterior::as_draws_matrix(draws))
        else as.matrix(draws)
   if (!is.matrix(m) || is.null(colnames(m)))
     stop("draws must be a fit, a posterior draws object or a named matrix.",
          call. = FALSE)
 
-  g_names <- .matrix_variable_names("G", k)
-  e_names <- .matrix_variable_names("E", k)
-  if (!all(g_names %in% colnames(m)) || !all(e_names %in% colnames(m)))
-    stop("draws must contain G and E for ", k, " traits, as named by ",
-         "lmm_animal() for the size_shape scores.", call. = FALSE)
+  in_g <- .matrix_variable_names("G", k_model)
+  in_e <- .matrix_variable_names("E", k_model)
+  in_p <- .matrix_variable_names("P", k_model)
+  has_components <- all(in_g %in% colnames(m)) && all(in_e %in% colnames(m))
+  if (!has_components && !all(in_p %in% colnames(m)))
+    stop("draws must contain G and E (lmm_animal) or P (lmm_multiCov) for ",
+         k_model, " model traits, as named by the model functions for the ",
+         "size_shape scores.", call. = FALSE)
 
+  out_g <- .matrix_variable_names("G", k)
+  out_e <- .matrix_variable_names("E", k)
+  out_p <- .matrix_variable_names("P", k)
   lower <- upper.tri(diag(k))
-  corr_names <- sprintf("corrG[%d,%d]", which(lower, arr.ind = TRUE)[, 1],
-                        which(lower, arr.ind = TRUE)[, 2])
-  out <- matrix(NA_real_, nrow(m),
-                k * k * 3L + sum(lower) + k,
-                dimnames = list(NULL,
-                                c(g_names,
-                                  sub("^G", "E", g_names),
-                                  sub("^G", "P", g_names),
-                                  corr_names,
-                                  sprintf("h2[%d]", seq_len(k)))))
+  triangle <- which(lower, arr.ind = TRUE)
 
-  for (i in seq_len(nrow(m))) {
-    G <- B %*% matrix(m[i, g_names], k) %*% t(B)
-    E <- B %*% matrix(m[i, e_names], k) %*% t(B)
-    P <- G + E
-    out[i, ] <- c(G, E, P,
-                  cov2cor(G)[lower],
-                  diag(G) / diag(P))
+  if (has_components) {
+    out <- matrix(NA_real_, nrow(m), k * k * 3L + nrow(triangle) + k,
+                  dimnames = list(NULL,
+                                  c(out_g, out_e, out_p,
+                                    sprintf("corrG[%d,%d]", triangle[, 1], triangle[, 2]),
+                                    sprintf("h2[%d]", seq_len(k)))))
+    for (i in seq_len(nrow(m))) {
+      G <- B %*% matrix(m[i, in_g], k_model) %*% t(B)
+      E <- B %*% matrix(m[i, in_e], k_model) %*% t(B)
+      P <- G + E
+      out[i, ] <- c(G, E, P, cov2cor(G)[lower], diag(G) / diag(P))
+    }
+  } else {
+    out <- matrix(NA_real_, nrow(m), k * k + nrow(triangle) + k,
+                  dimnames = list(NULL,
+                                  c(out_p,
+                                    sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
+                                    sprintf("sigma_P[%d]", seq_len(k)))))
+    for (i in seq_len(nrow(m))) {
+      P <- B %*% matrix(m[i, in_p], k_model) %*% t(B)
+      out[i, ] <- c(P, cov2cor(P)[lower], sqrt(diag(P)))
+    }
   }
   posterior::as_draws_matrix(out)
 }

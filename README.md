@@ -139,7 +139,7 @@ posterior::summarise_draws(
   posterior::subset_draws(post, variable = c("G[1,1]", "corrG[1,2]", "h2[1]")))
 ```
 
-Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale.
+Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale. `back_transform()` also accepts a `lmm_multiCov()` fit, in which case it returns `P`, `corrP` and `sigma_P`.
 
 ## Phenotypic covariance only (P)
 

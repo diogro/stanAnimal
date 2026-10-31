@@ -69,6 +69,42 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
                unname(diag(exp_G) / diag(exp_P)))
 })
 
+test_that("back_transform handles a phenotypic fit (P only)", {
+  ss <- size_shape(Y4)
+  k <- 4
+  P <- matrix(0.2, k, k); diag(P) <- 1.5
+  m <- matrix(rep(as.vector(P), 2), 2, byrow = TRUE)
+  colnames(m) <- names_mat("P", k)
+
+  post <- back_transform(m, ss)
+  B <- ss$loadings
+  exp_P <- unname(B %*% P %*% t(B))
+  triangle <- which(upper.tri(diag(k)), arr.ind = TRUE)
+
+  expect_equal(posterior::variables(post),
+               c(names_mat("P", k),
+                 sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
+                 sprintf("sigma_P[%d]", 1:k)))
+  d <- as.matrix(post)
+  expect_equal(matrix(d[1, names_mat("P", k)], k), exp_P)
+  expect_equal(as.vector(d[1, "corrP[1,2]"]), unname(cov2cor(exp_P)[1, 2]))
+  expect_equal(as.vector(d[1, sprintf("sigma_P[%d]", 1:k)]), sqrt(diag(exp_P)))
+})
+
+test_that("back_transform works with fewer shape axes than traits", {
+  ss <- size_shape(Y4, n_shape = 2)
+  k_model <- ncol(ss$loadings)
+  k <- nrow(ss$loadings)
+  P <- matrix(0.2, k_model, k_model); diag(P) <- 1.5
+  m <- matrix(rep(as.vector(P), 2), 2, byrow = TRUE)
+  colnames(m) <- names_mat("P", k_model)
+
+  post <- back_transform(m, ss)
+  expect_equal(posterior::variables(post)[seq_len(k * k)], names_mat("P", k))
+  expect_equal(matrix(as.matrix(post)[1, names_mat("P", k)], k),
+               unname(ss$loadings %*% P %*% t(ss$loadings)))
+})
+
 test_that("back_transform validates its input", {
   ss <- size_shape(Y4)
   expect_error(back_transform(matrix(0, 1, 1), list()), "size_shape object")

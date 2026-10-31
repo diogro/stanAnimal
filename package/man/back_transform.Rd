@@ -9,14 +9,17 @@ back_transform(fit, transform)
 \arguments{
 \item{fit}{A fit returned by \code{\link{lmm_animal}} (a
 \code{CmdStanMCMC} object), or a \code{posterior} draws object, or a matrix
-of draws, containing the variables \code{G} and \code{E}.}
+of draws, containing the variables \code{G} and \code{E}, or \code{P} for a
+phenotypic fit from \code{\link{lmm_multiCov}}.}
 
 \item{transform}{A \code{size_shape} object from \code{\link{size_shape}}.}
 }
 \value{
-A \code{draws_matrix} with, for the original \code{k} traits,
-  \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]}, \code{corrG[i,j]} (below the
-  diagonal) and \code{h2[i]}.
+A \code{draws_matrix} on the scale of the original traits. For an
+  animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
+  \code{corrG[i,j]} (below the diagonal) and \code{h2[i]}; for a phenotypic
+  fit it holds \code{P[i,j]}, \code{corrP[i,j]} (below the diagonal) and
+  \code{sigma_P[i]}.
 }
 \description{
 Takes a fit of the size and shape scores made with
@@ -27,8 +30,8 @@ the heritabilities on the scale of the original traits.
 \details{
 For each draw the covariance matrices are mapped as
   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
-  reparametrization of the traits. Heritabilities and genetic correlations
-  are then recomputed from the transformed matrices: unlike \eqn{G}, they are
+  reparametrization of the traits. Heritabilities and correlations are then
+  recomputed from the transformed matrices: unlike the covariance, they are
   not invariant under a change of traits, so the h2 of a shape axis is not
   the h2 of any original trait.
 
