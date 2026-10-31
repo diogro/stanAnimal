@@ -52,6 +52,11 @@
 #'   rows of \code{Y}, so ancestors without records and individuals with missing
 #'   phenotypes are handled: every row of \code{Y} must appear in the pedigree
 #'   or in the row names of the genotype matrix.
+#'
+#'   If the response has three or more traits and its first principal component
+#'   explains at least 80\% of the variance, a warning suggests fitting size and
+#'   shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
+#'   reports that share.
 #' @seealso \code{\link{lmm_animal}}, \code{\link{genomic_relationship}},
 #'   \code{\link{animal_draws}}
 #' @examples
@@ -115,6 +120,15 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
          call. = FALSE)
   if (any(!is.finite(Y)))
     stop("Y must contain only finite numeric values.", call. = FALSE)
+
+  if (ncol(Y) >= 3L) {
+    dominance <- pc_dominance(Y)
+    if (dominance >= 0.8)
+      warning("the first principal component of Y explains ",
+              round(100 * dominance), "% of the variance. If these are raw ",
+              "measurements, consider fitting size and shape scores instead ",
+              "(see ?size_shape).", call. = FALSE)
+  }
 
   if (nrow(frame) < 2L)
     stop("at least two complete rows are needed to build Y and X.", call. = FALSE)

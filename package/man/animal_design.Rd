@@ -76,6 +76,11 @@ Random-effect terms such as \code{(1 | animal)} are ignored, so
   rows of \code{Y}, so ancestors without records and individuals with missing
   phenotypes are handled: every row of \code{Y} must appear in the pedigree
   or in the row names of the genotype matrix.
+
+  If the response has three or more traits and its first principal component
+  explains at least 80\% of the variance, a warning suggests fitting size and
+  shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
+  reports that share.
 }
 \examples{
 dat <- data.frame(trait = rnorm(6), x = rnorm(6),

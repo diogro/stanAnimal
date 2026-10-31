@@ -1,3 +1,45 @@
+#' Share of variance in the leading principal component
+#'
+#' Diagnostic for the size and shape reparametrization: when a single component
+#' dominates, the traits are mostly one size gradient plus noise, and fitting
+#' size and shape scores is a much better behaved model than fitting all of the
+#' raw traits.
+#'
+#' @param Y Numeric matrix of traits, individuals in rows.
+#' @return The share of the total variance taken by the first principal
+#'   component of the correlation matrix of \code{Y}, between \code{1 / ncol(Y)}
+#'   and 1 (1 for a single trait).
+#' @details The correlation matrix is used so that traits measured on different
+#'   scales do not dominate through their units alone. A share near one means
+#'   the traits are one gradient, which is what \code{\link{size_shape}} is for;
+#'   a share close to \code{1 / ncol(Y)} means the traits carry independent
+#'   information and no reparametrization is needed.
+#' @seealso \code{\link{size_shape}}, \code{\link{animal_design}}
+#' @examples
+#' gradient <- rnorm(50)
+#' correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
+#'                     b = 2 * gradient + rnorm(50, sd = 0.2),
+#'                     c = -gradient + rnorm(50, sd = 0.2))
+#' pc_dominance(correlated)                    # close to 1
+#' pc_dominance(matrix(rnorm(150), 50, 3))     # close to 1 / 3
+#' @export
+pc_dominance <- function(Y) {
+  Y <- as.matrix(Y)
+  if (!is.numeric(Y) || any(!is.finite(Y)))
+    stop("Y must be a finite numeric matrix of traits.", call. = FALSE)
+  k <- ncol(Y)
+  if (is.null(k) || k < 1L)
+    stop("Y must have at least one column of traits.", call. = FALSE)
+  if (k == 1L)
+    return(1)
+  if (nrow(Y) < 3L)
+    stop("pc_dominance needs at least three individuals.", call. = FALSE)
+  if (any(apply(Y, 2L, stats::sd) == 0))
+    stop("every trait in Y must vary.", call. = FALSE)
+  eigenvalues <- eigen(stats::cor(Y), symmetric = TRUE, only.values = TRUE)$values
+  eigenvalues[1L] / sum(eigenvalues)
+}
+
 #' Size and shape scores for many correlated traits
 #'
 #' Rewrites a set of correlated traits as log size plus orthogonal shape axes,

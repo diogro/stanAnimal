@@ -69,6 +69,31 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
                unname(diag(exp_G) / diag(exp_P)))
 })
 
+test_that("pc_dominance detects a single gradient", {
+  set.seed(7)
+  gradient <- rnorm(50)
+  correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
+                      b = 2 * gradient + rnorm(50, sd = 0.2),
+                      c = -gradient + rnorm(50, sd = 0.2))
+  expect_gt(pc_dominance(correlated), 0.95)
+  expect_lt(pc_dominance(matrix(rnorm(150), 50, 3)), 0.7)
+  expect_equal(pc_dominance(rnorm(50)), 1)
+  expect_error(pc_dominance(matrix("a", 5, 2)), "numeric")
+  expect_error(pc_dominance(cbind(1:5, rep(1, 5))), "must vary")
+  expect_error(pc_dominance(matrix(0, 5, 3)), "must vary")
+})
+
+test_that("animal_design warns about a dominant principal component", {
+  set.seed(8)
+  gradient <- rnorm(30)
+  dominant <- data.frame(a = gradient + rnorm(30, sd = 0.1),
+                         b = 2 * gradient + rnorm(30, sd = 0.1),
+                         c = -gradient + rnorm(30, sd = 0.1))
+  expect_warning(animal_design(cbind(a, b, c) ~ 1, dominant), "size_shape")
+  independent <- data.frame(a = rnorm(30), b = rnorm(30), c = rnorm(30))
+  expect_silent(animal_design(cbind(a, b, c) ~ 1, independent))
+})
+
 test_that("back_transform handles a phenotypic fit (P only)", {
   ss <- size_shape(Y4)
   k <- 4
