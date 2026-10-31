@@ -1,34 +1,25 @@
-if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
-if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
-if(!require(rstan)){install.packages("rstan"); library(rstan)}
-if(!require(bayesplot)){install.packages("bayesplot"); library(bayesplot)}
-if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
-if(!require(nadiv)){install.packages("nadiv"); library(nadiv)}
-if(!require(tictoc)){install.packages("tictoc"); library(tictoc)}
-if(!require(pedtools)){install.packages("pedtools"); library(pedtools)}
-if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
+# Install (if needed) and load all dependencies in one go
+pkgs <- c("mvtnorm", "rstan", "nadiv", "evolqg", "corrplot", "patchwork",
+          "cran/pedtools")  # pedtools is no longer on CRAN -> install from GitHub
+if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
+pak::pkg_install(pkgs, upgrade = FALSE)
+invisible(lapply(sub("^.*/", "", pkgs), library, character.only = TRUE))
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
 library(stanAnimal)
-library(AtchleyMice)
 
 lt = function(x, diag = T) x[lower.tri(x, diag = diag)]
 
-#ped <- read.table("volesPED.txt",header=T)
 ped = randomPed(1500, 50, seed = 2)
-#ped = ped$`_comp1`
 ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
 ped = prepPed(ped)
 A <- as.matrix(nadiv::makeA(ped))
 nrow(A)
-#ped <- mice_pedigree
-#F6_ID = mice_info$F6$ID
-#A <- as.matrix(nadiv::makeA(ped))[F6_ID, F6_ID]
 L_A = chol(A)
 
-n_traits = 25
+n_traits = 5
 
 set.seed(41)
 (G <- RandomMatrix(n_traits, LKJ = FALSE))
@@ -44,8 +35,7 @@ beta = matrix(c(rep(1, n_traits),
                 rnorm(n_traits, 1, 1)), 3, n_traits, byrow = TRUE)
 rownames(beta) = c("Intercept", "sex", "Z")
 
-sex = as.numeric(as.factor(mice_info$F6$Sex))-1
-sex = sex[1:nrow(a)]
+sex = sample(c(0, 1), nrow(a), replace = TRUE)
 Z = rnorm(nrow(a))
 Intercept = rep(1, nrow(a))
 X = cbind(Intercept, sex, Z)
@@ -53,62 +43,48 @@ rownames(X) = rownames(a)
 e = rmvnorm(nrow(a), sigma = E)
 
 Y = X %*% beta + a + e
-#Y = 1 + a + e
+   
+stan_model = lmm_animal(Y, X, A, lkj_prior = 2, 
+                        iter = 400, warmup = 200,
+                        cores = 4, chains = 4, residual_structure = "diagonal")
 
+stan_model$summary(c("h2", "G", "E", "corrG"))
+stan_model$summary(c("h2", "G", "E", "corrG"),
+                   posterior::default_convergence_measures())
 
-apply(Y, 2, mean)
-apply(Y, 2, sd)
-apply(a, 2, sd)
-stan_model = lmm_animal(Y, X, A, lkj_prior = 8, chains = 4, iter = 400, warmup = 200,
-                        cores = 4, control = list(max_treedepth = 10),
-                        cmd_stan = FALSE)
+## Sampler diagnostics (divergences, treedepth, E-BFMI)
+stan_model$diagnostic_summary()
 
-model = rstan::extract(stan_model, permuted = TRUE)
+# Posterior means as matrices, compared with the simulated truth
+post_mean = function(name, k = n_traits) {
+  s = stan_model$summary(name, "mean")
+  matrix(s$mean[match(sprintf("%s[%d,%d]", name, rep(1:k, k), rep(1:k, each = k)),
+                      s$variable)], k)
+}
+G_hat = post_mean("G")
+E_hat = post_mean("E")
+round(G_hat, 2); round(G, 2)
+round(E_hat, 2); round(E, 2)
+round(cov2cor(post_mean("P")), 2); round(cov2cor(G + E), 2)
 
-rstan::summary(stan_model, pars = c("h2", "L_sigma", "L_sigma_G"))[[1]]
-rstan::summary(stan_model, pars = "G")[[1]]
+# Data with posterior draws of the G ellipses and genetic correlations
+print(plot_G_ellipses(stan_model, Y, n_show = 100))
 
-plot(colMeans(model$a), a, pch = 19)
-abline(0, 1)
-
-
+par(mfrow = c(1, 2))
+print(corrplot.mixed(post_mean("corrG"), upper = "ellipse"), main = "Estimated Genetic Correlations")
+print(corrplot.mixed(cov2cor(G), upper = "ellipse"), main = "True Genetic Correlations")
 par(mfrow = c(1, 1))
-plot(lt(cov(a)), lt(colMeans(model$G)), pch = 19)
-points(lt(G), lt(colMeans(model$G)), pch = 19, col = "red")
-abline(0, 1)
 
-colMeans(model$beta)
-t(beta)
+plot_corr(post_mean("corrG"), "Estimated") +
+plot_corr(cov2cor(G), "True")
 
-mcmc_areas(as.array(stan_model),
-           pars = c("G[1,1]"),
-           prob = 0.8)
+# Posterior distribution of the eigenvalue variance of G
+G_draws <- as.array(stan_model$draws("G"))  # iterations x chains x traits x traits
+eig_var <- apply(G_draws, c(1, 2), function(d) CalcEigenVar(matrix(d, n_traits)))
+eig_var_true <- CalcEigenVar(G)
 
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("h2[1]","h2[2]","h2[3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = 0.33)
-
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("G[1,2]", "G[1,3]", "G[2,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = G[lower.tri(G)])
-
-mcmc_intervals(
-  as.array(stan_model),
-  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean") + geom_vline(xintercept = cor(a)[lower.tri(G)])
-
-library(corrplot)
-par(mfrow=c(1,3))
-corrplot.mixed(cor(a), upper = "ellipse")
-corrplot.mixed(colMeans(model$corrG), upper = "ellipse")
-corrplot.mixed(colMeans(model$corrE), upper = "ellipse")
-
-cov(a)
+ggplot2::ggplot(data.frame(value = as.vector(eig_var)), ggplot2::aes(value)) +
+  ggplot2::geom_density(fill = "grey70", colour = NA) +
+  ggplot2::geom_vline(xintercept = eig_var_true, colour = "red", linetype = "dashed") +
+  ggplot2::labs(x = "Eigenvalue variance of G", y = "Density",
+                title = "Posterior eigenvalue variance of G (dashed line = true value)")
