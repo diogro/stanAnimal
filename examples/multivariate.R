@@ -122,18 +122,12 @@ print(bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(stan_model)))
 # Fixed effects
 print(bayesplot::mcmc_intervals(beta_draws))
 
-# Intervals with the simulated truth as red diamonds
-# mcmc_intervals draws pars[1] at the top of a discrete y axis ordered as
-# rev(pars), so matching on the parameter name puts each truth on its row.
+# Intervals with the simulated truth. mcmc_recover_intervals() matches the named
+# true values to the draws and marks them with hollow triangles.
 interval_plot = function(pars, truth) {
-  bayesplot::mcmc_intervals(
-    stan_model$draws(), pars = pars,
-    prob = 0.8, prob_outer = 0.99, point_est = "mean") +
-    ggplot2::geom_point(
-      data = data.frame(value = unname(truth),
-                        parameter = factor(pars, levels = rev(pars))),
-      mapping = ggplot2::aes(x = value, y = parameter),
-      colour = "red", size = 2.2, shape = 18, inherit.aes = FALSE)
+  bayesplot::mcmc_recover_intervals(
+    stan_model$draws(pars), true = stats::setNames(truth, pars),
+    prob = 0.8, prob_outer = 0.99, point_est = "mean")
 }
 print(interval_plot(sprintf("h2[%d]", seq_len(n_traits)),
                     diag(G) / (diag(G) + diag(E))))

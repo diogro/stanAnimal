@@ -98,23 +98,15 @@ bayesplot::color_scheme_set("blue")
 print(bayesplot::mcmc_trace(gibbs_draws,
                             pars = c("G11", "G12", "G22", "R11", "R22")))
 
-# Posterior intervals with the simulated truth as red diamonds
-# Named in the same order as the columns of gibbs_draws.
+# Posterior intervals with the simulated truth. mcmc_recover_intervals()
+# matches the named true values to the draws and marks them with hollow
+# triangles. The names must match the columns of gibbs_draws.
 truth <- c(
   G11 = G[1, 1], G12 = G[1, 2], G22 = G[2, 2],
   R11 = E[1, 1], R12 = E[1, 2], R22 = E[2, 2],
   `h2[t1]` = h2_true[1], `h2[t2]` = h2_true[2])
 
-pars <- posterior::variables(gibbs_draws)
-print(
-  bayesplot::mcmc_intervals(gibbs_draws, pars = pars, prob = 0.8,
-                            prob_outer = 0.99, point_est = "mean") +
-    # mcmc_intervals draws pars[1] at the top of a discrete y axis ordered as
-    # rev(pars), so matching on the parameter name puts each truth on its row.
-    ggplot2::geom_point(
-      data = data.frame(value = unname(truth[pars]),
-                        parameter = factor(pars, levels = rev(pars))),
-      mapping = ggplot2::aes(x = value, y = parameter),
-      colour = "red", size = 2.2, shape = 18, inherit.aes = FALSE) +
-    ggplot2::labs(caption = "Red diamonds: simulated values."))
+print(bayesplot::mcmc_recover_intervals(gibbs_draws, true = truth,
+                                        prob = 0.8, prob_outer = 0.99,
+                                        point_est = "mean"))
 dev.off()
