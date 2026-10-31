@@ -109,11 +109,12 @@ pars <- posterior::variables(gibbs_draws)
 print(
   bayesplot::mcmc_intervals(gibbs_draws, pars = pars, prob = 0.8,
                             prob_outer = 0.99, point_est = "mean") +
-    # mcmc_intervals puts the parameters on y = 1..k in the order of pars, with
-    # the names only as axis labels, so the truths are overlaid by position.
+    # mcmc_intervals draws pars[1] at the top of a discrete y axis ordered as
+    # rev(pars), so matching on the parameter name puts each truth on its row.
     ggplot2::geom_point(
-      data = data.frame(value = unname(truth[pars]), y = seq_along(pars)),
-      mapping = ggplot2::aes(x = value, y = y),
+      data = data.frame(value = unname(truth[pars]),
+                        parameter = factor(pars, levels = rev(pars))),
+      mapping = ggplot2::aes(x = value, y = parameter),
       colour = "red", size = 2.2, shape = 18, inherit.aes = FALSE) +
     ggplot2::labs(caption = "Red diamonds: simulated values."))
 dev.off()
