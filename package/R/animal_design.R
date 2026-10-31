@@ -121,7 +121,10 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
   if (any(!is.finite(Y)))
     stop("Y must contain only finite numeric values.", call. = FALSE)
 
-  if (ncol(Y) >= 3L) {
+  if (nrow(frame) < 2L)
+    stop("at least two complete rows are needed to build Y and X.", call. = FALSE)
+
+  if (ncol(Y) >= 3L && nrow(Y) >= 3L) {
     dominance <- pc_dominance(Y)
     if (dominance >= 0.8)
       warning("the first principal component of Y explains ",
@@ -130,8 +133,6 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
               "(see ?size_shape).", call. = FALSE)
   }
 
-  if (nrow(frame) < 2L)
-    stop("at least two complete rows are needed to build Y and X.", call. = FALSE)
   X <- stats::model.matrix(stats::terms(frame), data = frame)
   if (qr(X)$rank < ncol(X))
     stop("the fixed-effects design matrix is not full rank; remove redundant ",

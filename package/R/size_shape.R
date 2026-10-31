@@ -142,9 +142,9 @@ print.size_shape <- function(x, ...) {
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
 #' @return A \code{draws_matrix} on the scale of the original traits. For an
 #'   animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
-#'   \code{corrG[i,j]} and \code{corrP[i,j]} (below the diagonal) and
-#'   \code{h2[i]}; for a phenotypic fit it holds \code{P[i,j]},
-#'   \code{corrP[i,j]} (below the diagonal) and \code{sigma_P[i]}.
+#'   \code{corrG[i,j]} and \code{corrP[i,j]} (above the diagonal, \code{i < j})
+#'   and \code{h2[i]}; for a phenotypic fit it holds \code{P[i,j]},
+#'   \code{corrP[i,j]} (above the diagonal, \code{i < j}) and \code{sigma_P[i]}.
 #' @details For each draw the covariance matrices are mapped as
 #'   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
 #'   reparametrization of the traits. Heritabilities and correlations are then
@@ -199,8 +199,8 @@ back_transform <- function(fit, transform) {
   out_g <- .matrix_variable_names("G", k)
   out_e <- .matrix_variable_names("E", k)
   out_p <- .matrix_variable_names("P", k)
-  lower <- upper.tri(diag(k))
-  triangle <- which(lower, arr.ind = TRUE)
+  upper <- upper.tri(diag(k))
+  triangle <- which(upper, arr.ind = TRUE)
 
   if (has_components) {
     out <- matrix(NA_real_, nrow(m), k * k * 3L + 2L * nrow(triangle) + k,
@@ -213,7 +213,7 @@ back_transform <- function(fit, transform) {
       G <- B %*% matrix(m[i, in_g], k_model) %*% t(B)
       E <- B %*% matrix(m[i, in_e], k_model) %*% t(B)
       P <- G + E
-      out[i, ] <- c(G, E, P, cov2cor(G)[lower], cov2cor(P)[lower],
+      out[i, ] <- c(G, E, P, cov2cor(G)[upper], cov2cor(P)[upper],
                     diag(G) / diag(P))
     }
   } else {
@@ -224,7 +224,7 @@ back_transform <- function(fit, transform) {
                                     sprintf("sigma_P[%d]", seq_len(k)))))
     for (i in seq_len(nrow(m))) {
       P <- B %*% matrix(m[i, in_p], k_model) %*% t(B)
-      out[i, ] <- c(P, cov2cor(P)[lower], sqrt(diag(P)))
+      out[i, ] <- c(P, cov2cor(P)[upper], sqrt(diag(P)))
     }
   }
   posterior::as_draws_matrix(out)

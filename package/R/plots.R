@@ -311,8 +311,6 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
   data.frame(x = out[, 1], y = out[, 2])
 }
 
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 #' Heatmap of a correlation matrix
 #'
 #' @param M Correlation matrix, with optional row and column names.
