@@ -1,6 +1,8 @@
-list_pkgs <- c("dplyr", "bayesplot", "posterior", "cmdstanr")
+list_pkgs <- c("dplyr", "bayesplot", "posterior", "cmdstanr", "patchwork")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
+invisible(lapply(sub("^.*/", "", list_pkgs), library, character.only = TRUE))
+
 
 library(stanAnimal)
 ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/ratones.tsv", header = TRUE)
@@ -8,7 +10,7 @@ ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs
 # lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
 # there is no relatedness, so no G or breeding values.
 all_traits = names(ratonesdf)[12:46]
-traits = names(dplyr::select(ratonesdf, IS_PM:PM_ZI))
+traits = names(dplyr::select(ratonesdf, IS_PM:BA_OPI))
 
 # animal_design() builds Y (one column per trait) and X from the data frame,
 # so the model can be written as a formula. With many traits the cbind()
@@ -21,8 +23,8 @@ Y = ratones$Y
 X = ratones$X
 cat(nrow(Y), "individuals,", ncol(Y), "traits,", ncol(X), "fixed effects\n")
 
-cov_fit = lmm_multiCov(Y, X, lkj_prior = 2, chains = 4, iter = 800,
-                       control = list(adapt_delta = 0.99))
+cov_fit = lmm_multiCov(Y, X, lkj_prior = 6, iter = 800, 
+                       warmup = 400, cores = 4,  chains = 4)
 
 # Summaries and sampler diagnostics
 cov_fit$summary(c("P[1,1]", "P[2,2]", "P[3,3]", "corrP[1,2]", "corrP[1,3]", "corrP[2,3]"))
@@ -54,5 +56,6 @@ print(bayesplot::mcmc_intervals(
 print(bayesplot::mcmc_intervals(
   cov_fit$draws(), pars = c("corrP[1,2]", "corrP[1,3]", "corrP[2,3]"),
   prob = 0.8, prob_outer = 0.99, point_est = "mean"))
-print(plot_corr(cov2cor(P_hat), "Posterior mean phenotypic correlations"))
+print(plot_corr(cov2cor(P_hat), "Posterior mean phenotypic correlations") + 
+plot_corr(cov2cor(cov(residuals(lm(Y ~ X - 1)))), "Residual correlations"))
 dev.off()
