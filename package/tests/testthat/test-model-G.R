@@ -1,8 +1,8 @@
 skip_if_no_cmdstan()
 
-fit_G <- function(sim, ...) {
-  suppressWarnings(lmm_animal(sim$Y, sim$X, sim$A, iter = 1000, chains = 2,
-                              cores = 2, seed = 1, refresh = 0,
+fit_G <- function(sim, iter = 1000, warmup = floor(iter / 2), ...) {
+  suppressWarnings(lmm_animal(sim$Y, sim$X, sim$A, iter = iter, warmup = warmup,
+                              chains = 2, cores = 2, seed = 1, refresh = 0,
                               show_messages = FALSE, ...))
 }
 
@@ -71,4 +71,43 @@ test_that("two traits and a constant non-unit column are backtransformed", {
   # the response intercept 10 is now carried by the constant column of 5
   expect_equal(est[1, 1], sim$B[1, 1] / 5, tolerance = 0.5)
   expect_lt(max(abs(est[, 2:3] - t(sim$B)[, 2:3])), 0.25)
+})
+
+test_that("proportional G/E (degenerate eigenvalues) samples cleanly", {
+  # G proportional to E makes E^{-1/2} G E^{-1/2} a scalar matrix, so all its
+  # eigenvalues coincide and eigenvector gradients are undefined. The model
+  # must fall back to the per-individual Cholesky route without aborting.
+  K <- 5L
+  G5 <- diag(K)
+  for (k in seq_len(K - 1L))
+    G5[k, k + 1L] <- G5[k + 1L, k] <- 0.3
+  E5 <- G5
+
+  n_fam <- 24L; size <- 8L; n <- n_fam * size
+  A <- diag(n)
+  for (s in seq.int(1L, n, by = size)) {
+    m <- s:(s + size - 1L)
+    A[m, m] <- 0.5
+    diag(A)[m] <- 1
+  }
+  set.seed(99)
+  X <- cbind(Int = 1, x = stats::rnorm(n, 50, 10), z = stats::rbinom(n, 1, 0.5))
+  B <- cbind(stats::rnorm(K), stats::rnorm(K, 0, 0.3), stats::rnorm(K, 0, 0.1))
+  rmvn <- function(n, S) matrix(stats::rnorm(n * nrow(S)), n) %*% chol(S)
+  Y <- X %*% t(B) + t(chol(A)) %*% rmvn(n, G5) + rmvn(n, E5)
+
+  fit <- fit_G(list(Y = Y, X = X, A = A), iter = 400, warmup = 200)
+  expect_s3_class(fit, "CmdStanMCMC")
+
+  # The point of this regression test is that the fit does not abort on the
+  # degenerate eigenvalues: it must sample with no divergences. Convergence is
+  # checked loosely, because the h2 direction is weakly identified by design.
+  ds <- fit$diagnostic_summary(quiet = TRUE)
+  expect_equal(sum(ds$num_divergent), 0)
+  expect_lt(max(fit$summary()$rhat, na.rm = TRUE), 1.3)
+
+  # every trait has h2 = 0.5; the posterior mean should be near it and sane
+  h2 <- fit$summary("h2", "mean")$mean
+  expect_true(all(h2 > 0 & h2 < 1))
+  expect_lt(abs(mean(h2) - 0.5), 0.2)
 })

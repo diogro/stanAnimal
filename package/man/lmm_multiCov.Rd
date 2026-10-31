@@ -23,7 +23,7 @@ lmm_multiCov(
 
 \item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
 
-\item{lkj_prior}{Parameter of the LKJ prior on the correlation matrix. Higher values result in lower correlations, and 1 is uniform. Default is 2.}
+\item{lkj_prior}{Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations.}
 
 \item{iter}{number of MCMC iterations.}
 

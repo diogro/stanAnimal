@@ -6,7 +6,7 @@
 #' genetic component, and uses the same priors, scaling and outputs.
 #' @param Y Numeric response vector or matrix, with individuals in rows.
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.
-#' @param lkj_prior Parameter of the LKJ prior on the correlation matrix. Higher values result in lower correlations, and 1 is uniform. Default is 2.
+#' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations.
 #' @param iter number of MCMC iterations.
 #' @param warmup number of warmup iterations, must be smaller than iter.
 #' @param chains number of chains to run.
