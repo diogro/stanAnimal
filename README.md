@@ -29,6 +29,38 @@ fit <- lmm_animal(Y, X, A)
 
 `Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive semidefinite.
 
+## Formula interface
+
+`animal_design()` builds `Y` and `X` from a formula and a data frame, for when you would rather write the model the usual way than assemble the matrices by hand:
+
+```r
+design <- animal_design(cbind(t1, t2) ~ age + sex, data = dat)
+fit <- lmm_animal(design$Y, design$X, A)
+```
+
+- the left-hand side is a single response or a `cbind()` of several traits, and the columns of `Y` are named after them;
+- `X` is the fixed-effects design matrix, so its columns match the `beta` draws reported by the fit; factors are dummy coded and the intercept is kept unless the formula removes it;
+- random-effect terms such as `(1 | animal)` are ignored, so `lme4`-style formulas can be reused unchanged — relatedness is supplied through `A`;
+- rows with missing values are dropped (`na.action = stats::na.omit` by default), and the individuals kept, in row order, are returned in `attr(design, "individuals")` — the row names of `data`. Naming the rows with the individual IDs lets `A` be subset and reordered to match:
+
+```r
+rownames(dat) <- dat$id
+design <- animal_design(cbind(t1, t2) ~ age + sex, data = dat)
+keep <- attr(design, "individuals")
+fit <- lmm_animal(design$Y, design$X, A[keep, keep])
+```
+
+With many traits, the `cbind()` response is easier to assemble from the column names:
+
+```r
+traits <- c("t1", "t2", "t3")
+f <- reformulate(c("age", "sex"),
+                 response = sprintf("cbind(%s)", paste(traits, collapse = ", ")))
+design <- animal_design(f, data = dat)
+```
+
+The result feeds `lmm_animal()`, `lmm_multiCov()` and `lmm_animal_gibbs()` alike.
+
 ## Genomic relationship matrix
 
 If you have marker genotypes instead of a pedigree, `genomic_relationship()` builds a VanRaden (2008) GRM to use as `A`:
