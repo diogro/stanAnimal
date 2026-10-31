@@ -5,8 +5,10 @@
 #' simulations and checks; its priors differ from those in \code{lmm_animal}.
 #' @param Y Numeric response vector or matrix, with individuals in rows.
 #' @param X Numeric full-rank fixed-effects design matrix.
-#' @param A Symmetric positive-semidefinite relationship matrix, in the same
-#'   individual order as \code{Y} and \code{X}.
+#' @param A Symmetric positive-semidefinite relationship matrix, with rows and
+#'   columns in the same individual order as the rows of \code{Y}. When both
+#'   \code{A} and \code{Y} have row names they are used to put \code{A} in the
+#'   order of \code{Y}; names that disagree are an error.
 #' @param iter Total number of Gibbs iterations.
 #' @param warmup Number of initial iterations to discard.
 #' @param thin Keep every \code{thin}th iteration after burn-in.
@@ -39,8 +41,7 @@ lmm_animal_gibbs <- function(Y, X, A, iter = 1000, warmup = floor(iter / 2), thi
     stop("Y and X must have the same number of rows, and X must have columns.")
   if (qr(X)$rank < p)
     stop("X must have full column rank.")
-  if (!is.numeric(A) || any(!is.finite(A)) || !identical(dim(A), c(n, n)))
-    stop("A must be a finite numeric square matrix matching the rows of Y.")
+  A <- .check_relationship_matrix(A, Y)
   if (!is.numeric(iter) || length(iter) != 1L || !is.finite(iter) ||
       iter < 1 || iter != floor(iter) || !is.numeric(warmup) ||
       length(warmup) != 1L || !is.finite(warmup) || warmup < 0 ||

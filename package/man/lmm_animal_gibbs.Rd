@@ -11,8 +11,10 @@ lmm_animal_gibbs(Y, X, A, iter = 1000, warmup = floor(iter/2), thin = 1)
 
 \item{X}{Numeric full-rank fixed-effects design matrix.}
 
-\item{A}{Symmetric positive-semidefinite relationship matrix, in the same
-individual order as \code{Y} and \code{X}.}
+\item{A}{Symmetric positive-semidefinite relationship matrix, with rows and
+columns in the same individual order as the rows of \code{Y}. When both
+\code{A} and \code{Y} have row names they are used to put \code{A} in the
+order of \code{Y}; names that disagree are an error.}
 
 \item{iter}{Total number of Gibbs iterations.}
 

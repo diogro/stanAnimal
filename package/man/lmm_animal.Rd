@@ -28,7 +28,7 @@ lmm_animal(
 
 \item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
 
-\item{A}{Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.}
+\item{A}{Finite symmetric positive-semidefinite relationship matrix matching the rows of Y. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.}
 
 \item{lkj_prior}{Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics.}
 

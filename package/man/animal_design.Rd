@@ -4,28 +4,55 @@
 \alias{animal_design}
 \title{Response and design matrices from a model formula}
 \usage{
-animal_design(formula, data, na.action = stats::na.omit)
+animal_design(
+  formula,
+  data,
+  na.action = stats::na.omit,
+  pedigree = NULL,
+  genotypes = NULL,
+  ...
+)
 }
 \arguments{
 \item{formula}{Model formula. The left-hand side is a single response or
 \code{cbind()} of several traits; the right-hand side lists the fixed
 effects.}
 
-\item{data}{Data frame holding the variables in \code{formula}.}
+\item{data}{Data frame holding the variables in \code{formula}. When
+\code{pedigree} or \code{genotypes} are used, its row names must be the
+individual IDs.}
 
 \item{na.action}{How to handle missing values, passed to
 \code{\link[stats]{model.frame}}; the default drops incomplete rows.}
+
+\item{pedigree}{Optional pedigree, used to compute the additive relationship
+matrix \code{A} (needs the \pkg{nadiv} package). A data frame whose first
+three columns are the individual, its sire and its dam, with \code{0},
+\code{NA} or \code{""} for unknown parents. The pedigree may contain
+ancestors that are not in \code{data}.}
+
+\item{genotypes}{Optional genotype matrix, used to compute a genomic
+relationship matrix (see \code{\link{genomic_relationship}}): individuals
+in rows, with their IDs as row names, and biallelic markers in columns,
+coded 0, 1, 2.}
+
+\item{...}{Further arguments passed to \code{\link{genomic_relationship}},
+such as \code{p}, \code{maf} or \code{blend}.}
 }
 \value{
 A list with
   \item{Y}{response matrix, one column per trait, named after the
     response(s) in the formula;}
   \item{X}{fixed-effects design matrix, with columns named after the terms in
-    the formula.}
+    the formula;}
+  \item{A}{relationship matrix, present only when \code{pedigree} or
+    \code{genotypes} is given, restricted to the individuals in \code{Y} and
+    in the same row and column order.}
   Rows are in the order of \code{data}. \code{attr(, "individuals")} holds
   the row names of \code{data} for the rows kept, so naming the rows with the
-  individual IDs lets a relationship matrix \code{A} be subset and reordered
-  to match.
+  individual IDs lets a relationship matrix \code{A} be matched to
+  \code{Y}: \code{\link{lmm_animal}} puts a named \code{A} in the row order of
+  \code{Y} and errors if the names disagree.
 }
 \description{
 Builds the \code{Y} and \code{X} arguments of \code{\link{lmm_animal}},
@@ -43,17 +70,39 @@ Random-effect terms such as \code{(1 | animal)} are ignored, so
   and \code{X} has full column rank. Factor predictors are dummy coded and
   the intercept is kept unless the formula removes it, so the columns of
   \code{X} match the \code{beta} draws reported by a fit.
+
+  When \code{pedigree} or \code{genotypes} is given, \code{A} is computed for
+  all individuals in the pedigree or genotype matrix and then subset to the
+  rows of \code{Y}, so ancestors without records and individuals with missing
+  phenotypes are handled: every row of \code{Y} must appear in the pedigree
+  or in the row names of the genotype matrix.
 }
 \examples{
 dat <- data.frame(trait = rnorm(6), x = rnorm(6),
                   sex = rep(c(0, 1), each = 3), id = 1:6)
+rownames(dat) <- dat$id
 design <- animal_design(trait ~ sex + x, dat)
 design$Y
 design$X
 
 # formulas written for lme4 work as they are; the random term is ignored
 animal_design(trait ~ sex + (1 | id), dat)
+
+# relatedness from a pedigree (first three columns: id, sire, dam)
+if (requireNamespace("nadiv", quietly = TRUE)) {
+  ped <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
+                    dam = c(0, 0, 2, 2, 3, 5))
+  design <- animal_design(trait ~ sex, dat, pedigree = ped)
+  round(design$A, 2)
+}
+
+# relatedness from genotypes (individuals in rows, markers in columns)
+M <- matrix(rbinom(6 * 40, 2, 0.3), 6,
+            dimnames = list(as.character(1:6), NULL))
+design <- animal_design(trait ~ sex, dat, genotypes = M, blend = 0.01)
+dim(design$A)
 }
 \seealso{
-\code{\link{lmm_animal}}, \code{\link{animal_draws}}
+\code{\link{lmm_animal}}, \code{\link{genomic_relationship}},
+  \code{\link{animal_draws}}
 }

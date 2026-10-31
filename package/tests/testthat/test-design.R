@@ -56,3 +56,86 @@ test_that("animal_design validates its input", {
   infin$trait[2] <- Inf
   expect_error(animal_design(trait ~ sex, infin), "finite")
 })
+
+ped6 <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
+                   dam = c(0, 0, 2, 2, 3, 5))
+
+named_dat <- function(pheno = rnorm(6)) {
+  d <- data.frame(trait = pheno, x = rnorm(6), id = 1:6)
+  rownames(d) <- d$id
+  d
+}
+
+test_that("animal_design builds A from a pedigree", {
+  skip_if_not_installed("nadiv")
+  d <- animal_design(trait ~ x, named_dat(), pedigree = ped6)
+  ref <- as.matrix(suppressWarnings(nadiv::makeA(nadiv::prepPed(ped6))))
+  expect_equal(unname(d$A), unname(ref))
+  expect_equal(rownames(d$A), as.character(1:6))
+  expect_equal(colnames(d$A), rownames(d$A))
+  expect_true(isSymmetric(d$A))
+})
+
+test_that("the pedigree may contain ancestors without records", {
+  skip_if_not_installed("nadiv")
+  ped <- data.frame(id = 1:8,
+                    sire = c(0, 0, 0, 0, 1, 3, 5, 5),
+                    dam = c(0, 0, 0, 0, 2, 4, 6, 7))
+  dd <- data.frame(trait = rnorm(4), id = 5:8)
+  rownames(dd) <- dd$id
+  d <- animal_design(trait ~ 1, dd, pedigree = ped)
+  expect_equal(dim(d$A), c(4L, 4L))
+  expect_equal(rownames(d$A), as.character(5:8))
+})
+
+test_that("A follows the rows kept when phenotypes are missing", {
+  skip_if_not_installed("nadiv")
+  pheno <- rnorm(6)
+  pheno[3] <- NA
+  d <- animal_design(trait ~ 1, named_dat(pheno), pedigree = ped6)
+  expect_equal(nrow(d$Y), 5L)
+  expect_equal(rownames(d$A), c("1", "2", "4", "5", "6"))
+})
+
+test_that("animal_design builds A from genotypes", {
+  set.seed(2)
+  M <- matrix(rbinom(6 * 60, 2, 0.3), 6,
+              dimnames = list(as.character(1:6), NULL))
+  d <- animal_design(trait ~ x, named_dat(), genotypes = M)
+  expect_equal(d$A, genomic_relationship(M))
+  d2 <- animal_design(trait ~ x, named_dat(), genotypes = M, blend = 0.01)
+  expect_equal(d2$A, genomic_relationship(M, blend = 0.01))
+})
+
+test_that("genotypes may cover individuals without records", {
+  set.seed(3)
+  M <- matrix(rbinom(9 * 60, 2, 0.3), 9,
+              dimnames = list(as.character(1:9), NULL))
+  d <- animal_design(trait ~ 1, named_dat(), genotypes = M)
+  ref <- genomic_relationship(M)[as.character(1:6), as.character(1:6)]
+  expect_equal(unname(d$A), unname(ref), ignore_attr = TRUE)
+  expect_equal(rownames(d$A), as.character(1:6))
+})
+
+test_that("animal_design validates pedigrees and genotypes", {
+  dat <- named_dat()
+  set.seed(4)
+  M <- matrix(rbinom(6 * 60, 2, 0.3), 6,
+              dimnames = list(as.character(1:6), NULL))
+  expect_error(animal_design(trait ~ 1, dat, pedigree = ped6, genotypes = M),
+               "either pedigree or genotypes")
+  expect_error(animal_design(trait ~ 1, dat, blend = 0.1),
+               "only used when genotypes")
+
+  skip_if_not_installed("nadiv")
+  expect_error(animal_design(trait ~ 1, dat, pedigree = ped6[, 1:2]),
+               "three columns")
+  expect_error(animal_design(trait ~ 1, dat, pedigree = rbind(ped6, ped6[1, ])),
+               "duplicated")
+  bad <- dat
+  rownames(bad) <- c("x1", as.character(2:6))
+  expect_error(animal_design(trait ~ 1, bad, pedigree = ped6),
+               "not in the pedigree")
+  expect_error(animal_design(trait ~ 1, bad, genotypes = M),
+               "not in the genotypes")
+})

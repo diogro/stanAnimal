@@ -3,7 +3,7 @@
 #' Fits a univariate or multivariate linear mixed animal model using a known relatedness matrix
 #' @param Y response variable, univariate or multivariate
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.
-#' @param A Finite symmetric positive-semidefinite relationship matrix matching the rows of Y.
+#' @param A Finite symmetric positive-semidefinite relationship matrix matching the rows of Y. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics.
 #' @param beta_prior Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.
 #' @param parametrization Univariate models only. \code{"variance"} (default) estimates the genetic and residual standard deviations with half-normal priors and derives h2. \code{"h2"} estimates a total standard deviation and h2 with a beta prior (\code{beta_prior}). If the variance version shows low E-BFMI, a warning suggests switching to \code{"h2"}. Ignored for multivariate fits.
@@ -44,8 +44,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
     stop("blend_A must be TRUE or FALSE.")
 
   n <- nrow(Y)
-  if (!is.numeric(A) || any(!is.finite(A)) || !identical(dim(A), c(n, n)))
-    stop("A must be a finite numeric square matrix matching the rows of Y.")
+  A <- .check_relationship_matrix(A, Y)
 
   a_scale <- max(1, max(abs(A)))
   if (max(abs(A - t(A))) > 1e-8 * a_scale)
@@ -141,6 +140,43 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
   if (qr(X)$rank < p)
     stop("X must have full column rank.")
   list(Y = Y, X = X)
+}
+
+# Checks that A matches the rows of Y and returns it with its individuals in the
+# order of Y. When both A and Y are named the names are used to align A; names
+# that disagree are an error. Without names the rows are matched by position, so
+# only the dimensions are checked.
+.check_relationship_matrix <- function(A, Y) {
+  Y <- as.matrix(Y)
+  n <- nrow(Y)
+  if (!is.numeric(A) || any(!is.finite(A)) || is.null(dim(A)))
+    stop("A must be a finite numeric square matrix matching the rows of Y.",
+         call. = FALSE)
+  if (!identical(dim(A), c(n, n)))
+    stop("A must be a square matrix matching the rows of Y: A is ", nrow(A),
+         " x ", ncol(A), " but Y has ", n, " rows.", call. = FALSE)
+
+  y_ids <- rownames(Y)
+  a_ids <- rownames(A)
+  if (is.null(y_ids) || is.null(a_ids))
+    return(A)
+  if (is.null(colnames(A)) || !identical(a_ids, colnames(A)))
+    stop("A must have identical row and column names.", call. = FALSE)
+  if (anyDuplicated(a_ids))
+    stop("A has duplicated individual names.", call. = FALSE)
+
+  missing_in_A <- setdiff(y_ids, a_ids)
+  missing_in_Y <- setdiff(a_ids, y_ids)
+  if (length(missing_in_A) || length(missing_in_Y))
+    stop("the individuals in A do not match the rows of Y: ",
+         length(missing_in_A), " rows of Y are not in A and ",
+         length(missing_in_Y), " individuals in A are not in Y. Rename or ",
+         "reorder them so the names agree, or drop the names from both to ",
+         "match by position.", call. = FALSE)
+
+  if (identical(y_ids, a_ids))
+    return(A)
+  A[y_ids, y_ids, drop = FALSE]
 }
 
 .warn_low_bfmi <- function(fit, threshold = 0.3) {
