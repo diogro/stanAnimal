@@ -17,9 +17,9 @@ phenotypic fit from \code{\link{lmm_multiCov}}.}
 \value{
 A \code{draws_matrix} on the scale of the original traits. For an
   animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
-  \code{corrG[i,j]} (below the diagonal) and \code{h2[i]}; for a phenotypic
-  fit it holds \code{P[i,j]}, \code{corrP[i,j]} (below the diagonal) and
-  \code{sigma_P[i]}.
+  \code{corrG[i,j]} and \code{corrP[i,j]} (below the diagonal) and
+  \code{h2[i]}; for a phenotypic fit it holds \code{P[i,j]},
+  \code{corrP[i,j]} (below the diagonal) and \code{sigma_P[i]}.
 }
 \description{
 Takes a fit of the size and shape scores made with

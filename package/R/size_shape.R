@@ -142,9 +142,9 @@ print.size_shape <- function(x, ...) {
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
 #' @return A \code{draws_matrix} on the scale of the original traits. For an
 #'   animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
-#'   \code{corrG[i,j]} (below the diagonal) and \code{h2[i]}; for a phenotypic
-#'   fit it holds \code{P[i,j]}, \code{corrP[i,j]} (below the diagonal) and
-#'   \code{sigma_P[i]}.
+#'   \code{corrG[i,j]} and \code{corrP[i,j]} (below the diagonal) and
+#'   \code{h2[i]}; for a phenotypic fit it holds \code{P[i,j]},
+#'   \code{corrP[i,j]} (below the diagonal) and \code{sigma_P[i]}.
 #' @details For each draw the covariance matrices are mapped as
 #'   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
 #'   reparametrization of the traits. Heritabilities and correlations are then
@@ -203,16 +203,18 @@ back_transform <- function(fit, transform) {
   triangle <- which(lower, arr.ind = TRUE)
 
   if (has_components) {
-    out <- matrix(NA_real_, nrow(m), k * k * 3L + nrow(triangle) + k,
+    out <- matrix(NA_real_, nrow(m), k * k * 3L + 2L * nrow(triangle) + k,
                   dimnames = list(NULL,
                                   c(out_g, out_e, out_p,
                                     sprintf("corrG[%d,%d]", triangle[, 1], triangle[, 2]),
+                                    sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
                                     sprintf("h2[%d]", seq_len(k)))))
     for (i in seq_len(nrow(m))) {
       G <- B %*% matrix(m[i, in_g], k_model) %*% t(B)
       E <- B %*% matrix(m[i, in_e], k_model) %*% t(B)
       P <- G + E
-      out[i, ] <- c(G, E, P, cov2cor(G)[lower], diag(G) / diag(P))
+      out[i, ] <- c(G, E, P, cov2cor(G)[lower], cov2cor(P)[lower],
+                    diag(G) / diag(P))
     }
   } else {
     out <- matrix(NA_real_, nrow(m), k * k + nrow(triangle) + k,

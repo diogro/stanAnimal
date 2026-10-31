@@ -65,6 +65,7 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
   expect_equal(matrix(d[1, names_mat("E", k)], k), exp_E)
   expect_equal(matrix(d[1, names_mat("P", k)], k), exp_P)
   expect_equal(as.vector(d[1, "corrG[1,2]"]), unname(cov2cor(exp_G)[1, 2]))
+  expect_equal(as.vector(d[1, "corrP[1,2]"]), unname(cov2cor(exp_P)[1, 2]))
   expect_equal(as.vector(d[1, sprintf("h2[%d]", 1:k)]),
                unname(diag(exp_G) / diag(exp_P)))
 })
