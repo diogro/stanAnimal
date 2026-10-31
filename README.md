@@ -15,6 +15,29 @@ install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOp
 pak::pkg_install("diogro/stanAnimal/package")
 ```
 
+# Example data
+
+Two datasets from the mouse artificial-selection experiment of Penna et al. (2017) ship with the package:
+
+- `ratones_morpho`: 329 mice with 35 cranial distances plus sex, age, generation and selection line, one row per individual;
+- `ratones_pedigree`: the pedigree of the 525 individuals of the experiment, ancestors included.
+
+The rows of `ratones_morpho` are named with the individual IDs, so a relationship matrix built from the pedigree is matched to the records automatically:
+
+```r
+library(stanAnimal)
+traits <- c("IS_PM", "NSL_NA", "PT_BA", "BA_OPI")
+ratones_morpho[traits] <- log(ratones_morpho[traits])   # morphometrics on the log scale
+
+# SEX + AGE + LIN: the lines were selected for body weight, so their means differ
+design <- animal_design(cbind(IS_PM, NSL_NA, PT_BA, BA_OPI) ~ SEX + AGE + LIN,
+                        ratones_morpho, pedigree = ratones_pedigree)
+fit <- lmm_animal(design$Y, design$X, design$A)
+fit$summary(c("h2", "corrG"))
+```
+
+The pedigree path needs the `nadiv` package. `examples/ratones.R` fits this model end to end and plots the results.
+
 # Usage
 
 ```r
@@ -194,7 +217,7 @@ Models fit with cmdstanr are compiled once and the executable is reused in later
 
 # Examples
 
-Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
+Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `ratones.R` (real mouse data, the bundled datasets), `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth or with the data and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
 
 # Example
 

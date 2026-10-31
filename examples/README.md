@@ -11,7 +11,8 @@ Rscript examples/univariate.R
 |---|---|
 | `univariate.R` | `lmm_animal()` with a single trait, both parametrisations (`"variance"` and `"h2"`), compared with a simulated truth |
 | `multivariate.R` | `lmm_animal()` with five correlated traits: `G`, `E`, `P`, `corrG`, `h2` and the fixed effects |
-| `phenotypic_covariance.R` | `lmm_multiCov()` with no pedigree, plus `size_shape()` and `back_transform()` on real mouse morphometric data |
+| `ratones.R` | `lmm_animal()` on real data: four log cranial distances of 329 mice, with `A` from the bundled pedigree (`ratones_morpho` and `ratones_pedigree`) |
+| `phenotypic_covariance.R` | `lmm_multiCov()` with no pedigree, plus `size_shape()` and `back_transform()`, on the same mouse data |
 | `gibbs.R` | `lmm_animal_gibbs()`, the single-chain Gibbs sampler; its inverse-Wishart priors differ from `lmm_animal()` |
 | `multivariate_power_simulation.R` | Parallel simulation study of genetic-correlation recovery across sample sizes, writing summaries to `results/` |
 
@@ -21,4 +22,6 @@ intervals, and the simulated value is the hollow triangle. The true values are
 matched to the draws by name, not by position.
 
 All scripts need `stanAnimal` installed and CmdStan available
-(`cmdstanr::install_cmdstan()`), except `gibbs.R`, which needs neither.
+(`cmdstanr::install_cmdstan()`), except `gibbs.R`, which needs neither. The
+mouse data used by `ratones.R` and `phenotypic_covariance.R` ships with the
+package, so nothing is downloaded.
