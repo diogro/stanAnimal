@@ -10,12 +10,14 @@ plot_G_ellipses(
   trait_names = NULL,
   n_show = 100,
   level = 0.95,
-  prob = 0.95
+  prob = 0.95,
+  X = NULL
 )
 }
 \arguments{
 \item{fit}{A multivariate fit from \code{lmm_animal} (\code{cmd_stan = TRUE})
-or a \code{posterior} draws object containing \code{G} and \code{corrG}.}
+or a \code{posterior} draws object containing \code{G}, \code{corrG}
+and, when \code{X} is given, the fixed effects \code{beta}.}
 
 \item{Y}{Matrix of the observed traits (the \code{Y} given to the fit).}
 
@@ -27,6 +29,12 @@ or a \code{posterior} draws object containing \code{G} and \code{corrG}.}
 \item{level}{Probability level of the ellipses.}
 
 \item{prob}{Probability mass of the HPD interval of the correlations.}
+
+\item{X}{Optional fixed-effects design matrix (the \code{X} given to the
+fit). When supplied, the traits are replaced by their residuals,
+\code{Y - X \%*\% t(beta)}, using the posterior mean of \code{beta}, and
+\code{P} is the covariance of those residuals. Pass it whenever the model
+has covariates or factors.}
 }
 \value{
 A ggplot object.
@@ -37,4 +45,14 @@ For each pair of traits, the lower triangle shows the data with the
 posterior mean G (thick line) and the observed phenotypic covariance
 (dashed), all centred on the data mean. The upper triangle reports the
 posterior mean genetic correlation and its HPD interval.
+}
+\details{
+\code{G} and \code{E} describe the traits after the fixed effects,
+  so with \code{X = NULL} the points and the dashed ellipse include the sex,
+  age or group differences of the sample. Those effects can dwarf the
+  residual covariance, leaving a cloud much wider than the ellipses;
+  supplying \code{X} removes them and the scatter then has roughly the
+  covariance \code{P = G + E}. Residuals are formed with the posterior mean
+  of \code{beta}, so the points are those of a residual plot, not of an
+  individual draw.
 }

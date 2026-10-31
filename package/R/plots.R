@@ -202,22 +202,47 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 #' posterior mean genetic correlation and its HPD interval.
 #'
 #' @param fit A multivariate fit from \code{lmm_animal} (\code{cmd_stan = TRUE})
-#'   or a \code{posterior} draws object containing \code{G} and \code{corrG}.
+#'   or a \code{posterior} draws object containing \code{G}, \code{corrG}
+#'   and, when \code{X} is given, the fixed effects \code{beta}.
 #' @param Y Matrix of the observed traits (the \code{Y} given to the fit).
 #' @param trait_names Optional trait names; default are the column names of
 #'   \code{Y}.
 #' @param n_show Number of posterior draws of G to draw.
 #' @param level Probability level of the ellipses.
 #' @param prob Probability mass of the HPD interval of the correlations.
+#' @param X Optional fixed-effects design matrix (the \code{X} given to the
+#'   fit). When supplied, the traits are replaced by their residuals,
+#'   \code{Y - X \%*\% t(beta)}, using the posterior mean of \code{beta}, and
+#'   \code{P} is the covariance of those residuals. Pass it whenever the model
+#'   has covariates or factors.
 #' @return A ggplot object.
+#' @details \code{G} and \code{E} describe the traits after the fixed effects,
+#'   so with \code{X = NULL} the points and the dashed ellipse include the sex,
+#'   age or group differences of the sample. Those effects can dwarf the
+#'   residual covariance, leaving a cloud much wider than the ellipses;
+#'   supplying \code{X} removes them and the scatter then has roughly the
+#'   covariance \code{P = G + E}. Residuals are formed with the posterior mean
+#'   of \code{beta}, so the points are those of a residual plot, not of an
+#'   individual draw.
 #' @export
 plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
-                            level = 0.95, prob = 0.95) {
+                            level = 0.95, prob = 0.95, X = NULL) {
   Y <- as.matrix(Y)
   k <- ncol(Y)
   if (k < 2L) stop("At least two traits are needed.")
   trait_names <- trait_names %||% colnames(Y) %||% paste0("trait", seq_len(k))
   if (length(trait_names) != k) stop("trait_names must have one name per trait.")
+
+  p_label <- "Observed P"
+  if (!is.null(X)) {
+    X <- as.matrix(X)
+    if (!is.numeric(X) || any(!is.finite(X)))
+      stop("X must contain only finite numeric values.")
+    if (nrow(X) != nrow(Y) || ncol(X) < 1L)
+      stop("X must have one row per row of Y and at least one column.")
+    Y <- Y - X %*% t(.fixed_effect_means(fit, k, ncol(X)))
+    p_label <- "Residual P"
+  }
 
   draws <- fit
   if (inherits(fit, "CmdStanFit") || (is.list(fit) && is.function(fit$draws)))
@@ -264,7 +289,7 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
         row = row_f, col = col_f, x = Y[, col], y = Y[, row])
       lower$lines <- c(lower$lines,
         lapply(shown, function(s) mk(G[s, , ], "G draws", s)),
-        list(mk(mean_G, "Posterior mean G"), mk(P_obs, "Observed P")))
+        list(mk(mean_G, "Posterior mean G"), mk(P_obs, p_label)))
     }
   }
   bind <- function(l) do.call(rbind, l)
@@ -293,14 +318,31 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
                                                 size = I(.data$size), fontface = .data$face)) +
     ggplot2::facet_grid(rows = ggplot2::vars(.data$row), cols = ggplot2::vars(.data$col),
                         scales = "free") +
-    ggplot2::scale_colour_manual(values = c("Posterior mean G" = "firebrick",
-                                            "Observed P" = "royalblue")) +
-    ggplot2::scale_linetype_manual(values = c("Posterior mean G" = "solid",
-                                              "Observed P" = "dashed")) +
-    ggplot2::labs(x = NULL, y = NULL, colour = NULL, linetype = NULL) +
+    ggplot2::scale_colour_manual(values = stats::setNames(
+      c("firebrick", "royalblue"), c("Posterior mean G", p_label))) +
+    ggplot2::scale_linetype_manual(values = stats::setNames(
+      c("solid", "dashed"), c("Posterior mean G", p_label))) +
+    ggplot2::labs(x = NULL, y = NULL, colour = NULL, linetype = NULL,
+                  subtitle = if (!is.null(X))
+                    "residuals after the fixed effects, and G versus P = G + E") +
     ggplot2::theme_minimal(base_size = 11) +
     ggplot2::theme(legend.position = "top", panel.border = ggplot2::element_rect(
       colour = "grey70", fill = NA))
+}
+
+# Posterior means of the fixed effects of a fit, as a traits-by-terms matrix.
+.fixed_effect_means <- function(fit, n_traits, n_terms) {
+  beta <- if (inherits(fit, "CmdStanFit") || (is.list(fit) && is.function(fit$draws)))
+    fit$draws("beta") else fit
+  available <- if (is.matrix(beta)) colnames(beta) else posterior::variables(beta)
+  variables <- grep("^beta\\[", available, value = TRUE)
+  if (length(variables) != n_traits * n_terms)
+    stop("the draws hold ", length(variables), " fixed effects, but X has ",
+         n_terms, " columns for ", n_traits, " traits: pass the X of this fit.",
+         call. = FALSE)
+  means <- if (is.matrix(beta)) colMeans(beta[, variables, drop = FALSE]) else
+    colMeans(as.matrix(posterior::as_draws_matrix(beta))[, variables, drop = FALSE])
+  matrix(means, nrow = n_traits)
 }
 
 .ellipse <- function(S, centre, level = 0.95) {

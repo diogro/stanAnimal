@@ -142,8 +142,9 @@ print(plot_prior_posterior(stan_model, trait_names = traits, lkj_prior = 2,
                            ncol = min(3, n_traits)))
 print(plot_forest(stan_model, trait_names = traits, lkj_prior = 2))
 
-# Data with posterior draws of the G ellipses and genetic correlations
-print(plot_G_ellipses(stan_model, Y, n_show = 100))
+# Residuals after the fixed effects (X), with posterior draws of the G ellipses
+# and genetic correlations
+print(plot_G_ellipses(stan_model, Y, n_show = 100, X = X))
 
 # Realized breeding values, estimated and simulated genetic correlations
 par(mfrow = c(1, 3))
@@ -171,4 +172,4 @@ print(ggplot2::ggplot(data.frame(value = as.vector(eig_var)), ggplot2::aes(value
 dev.off()
 
 # Same plot on screen, after the PDF device is closed
-print(plot_G_ellipses(stan_model, Y, n_show = 100))
+print(plot_G_ellipses(stan_model, Y, n_show = 100, X = X))
