@@ -12,6 +12,7 @@ library(devtools)
 rstan_options(auto_write = TRUE)
 options(mc.cores = 12)
 
+# devtools::install("package")
 library(stanAnimal)
 "cmdstanr" %in% installed.packages()[,"Package"]
 #cmdstanr::install_cmdstan(cores = 2)
@@ -96,7 +97,6 @@ stan_model$summary(c("h2", "G", "E", "corrG"),
 ## Sampler diagnostics (divergences, treedepth, E-BFMI)
 stan_model$diagnostic_summary()
 
-pdf("simulatedAnimal.pdf", width = 8, height = 6)
 # Fixed effects are named after the columns of X: beta[trait, column]
 beta_draws = animal_draws(stan_model, "beta")
 posterior::summarise_draws(beta_draws)
@@ -171,11 +171,14 @@ print(plot_G_ellipses(stan_model, Y, n_show = 100))
 # Estimated vs simulated genetic correlations
 library(corrplot)
 par(mfrow = c(1, 3))
-corrplot.mixed(cor(a), upper = "ellipse")      # realized breeding values
-corrplot.mixed(post_mean("corrG"), upper = "ellipse")
-corrplot.mixed(corrG, upper = "ellipse")       # truth
+print(corrplot.mixed(cor(a), upper = "ellipse"))      # realized breeding values
+print(corrplot.mixed(post_mean("corrG"), upper = "ellipse"))
+print(corrplot.mixed(corrG, upper = "ellipse"))       # truth
 par(mfrow = c(1, 1))
 
 # Same plot on screen, after the PDF device is closed
 plot_G_ellipses(stan_model, Y, n_show = 100)
 dev.off()
+
+
+

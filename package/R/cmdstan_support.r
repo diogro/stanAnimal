@@ -25,7 +25,8 @@ cstan <- function(model_code, data = list(), chains = 1, cores = 1, iter = 1000,
                iter_warmup = warmup,
                iter_sampling = iter - warmup,
                adapt_delta = adapt_delta,
-               max_treedepth = max_treedepth)
+               max_treedepth = max_treedepth,
+               init = 0)
   if (threads > 1) args$threads_per_chain <- threads
   args <- utils::modifyList(args, list(...))
   do.call(mod$sample, args)

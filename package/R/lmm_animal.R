@@ -20,6 +20,8 @@
 #' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{animal_draws}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
 #' @details The models estimate the additive genetic and residual standard deviations (\code{sigma_G}, \code{sigma_E}) directly, with half-normal priors on the standardized response scale, and report \code{h2} as a derived quantity; there is no prior on h2 itself. The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects and only requires \code{A} to be positive semidefinite. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
 #'
+#' The per-individual likelihoods are whitened by the residual Cholesky factor and rotated into a single eigendecomposition of \code{E^{-1/2} G E^{-1/2}}, so each evaluation costs \code{O(N K^2 + K^3)} rather than \code{O(N K^3)}. This lets the multivariate model scale to dozens of traits without a Cholesky factorization per individual.
+#'
 #' Continuous predictors are centered and divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not centered or scaled. Standardized slopes have \code{normal(0, 1)} priors; the intercept contribution has a wider \code{normal(0, 2.5)} prior. Returned \code{beta} coefficients are backtransformed to original predictor and response units, including restoring the response mean to the intercept; \code{beta_scaled} draws are also available.
 #' @export
 #' @author Diogo Melo
@@ -89,8 +91,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
         paste0(sub("\\.stan$", "", uni_file), "_runtime"),
         if (is.null(model_file)) sub("\\.stan$", "", uni_file) else NULL
       )
-      fit = rstan::sampling(model, data = stan_data,
-                            iter = iter, warmup = warmup, chains = chains, control = control, ...)
+      fit = .rstan_sample(model, stan_data, iter, warmup, chains, control, ...)
       fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
     }
     if(parametrization == "variance")
@@ -117,10 +118,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
         "animalModelG_runtime",
         if (is.null(model_file)) "animalModelG" else NULL
       )
-      fit = rstan::sampling(model,
-                            data = stan_data,
-                            iter = iter, warmup = warmup, chains = chains,
-                            control = control, ...)
+      fit = .rstan_sample(model, stan_data, iter, warmup, chains, control, ...)
       fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
     }
   }
@@ -239,4 +237,13 @@ animal_draws <- function(fit, variables = NULL, ...) {
     assign(cache_key, list(code = model_code, model = model),
            envir = .rstan_model_cache)
   model
+}
+
+.rstan_sample <- function(model, stan_data, iter, warmup, chains, control, ...) {
+  # init = 0 starts at the prior mode (identity correlations, unit scales),
+  # avoiding degenerate cholesky_factor_corr draws that can abort a chain at
+  # high trait counts. Overridden by an explicit `init` in `...`.
+  args <- list(object = model, data = stan_data, iter = iter, warmup = warmup,
+               chains = chains, control = control, init = 0)
+  do.call(rstan::sampling, utils::modifyList(args, list(...)))
 }

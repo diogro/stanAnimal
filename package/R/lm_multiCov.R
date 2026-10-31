@@ -53,9 +53,7 @@ lmm_multiCov = function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2)
       "phenotypicModel_runtime",
       if (is.null(model_file)) "phenotypicModel" else NULL
     )
-    fit = rstan::sampling(model, data = stan_data,
-                          iter = iter, warmup = warmup, chains = chains,
-                          control = control, ...)
+    fit = .rstan_sample(model, stan_data, iter, warmup, chains, control, ...)
     fit <- .rename_fixed_effect_draws(fit, X, ncol(Y))
   }
   return(fit)

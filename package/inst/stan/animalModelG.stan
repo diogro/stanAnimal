@@ -1,6 +1,19 @@
 // Multivariate animal model parametrized directly by G and E.
 // Breeding values are marginalized: with A = Q diag(lambda) Q', the rotated
 // records are independent, y*_i ~ MVN(X*_i beta, lambda_i G + E).
+//
+// The N per-individual covariances are never factorized one at a time. With
+// E = L_E L_E' and C = L_E^{-1} L_G (lower triangular), for any lambda
+//   lambda G + E = L_E (I + lambda C C') L_E',
+// and writing C C' = U diag(d) U' gives, for every individual,
+//   log det(lambda G + E) = log det(E) + sum_k log(1 + lambda d_k)
+//   r' (lambda G + E)^{-1} r = sum_k (u_k' L_E^{-1} r)^2 / (1 + lambda d_k).
+// Whitening the residuals by L_E and rotating them once by U therefore costs
+// O(K) per individual, so an evaluation is O(N K^2 + K^3) instead of the
+// O(N K^3) of a Cholesky decomposition for each of the N individuals. When the
+// eigenvalues of E^{-1/2} G E^{-1/2} are nearly coincident (where eigenvector
+// gradients are undefined) the model falls back to the per-individual
+// Cholesky route, which has a well-behaved gradient.
 data {
   int<lower=1> K; // number of traits
   int<lower=1> J; // number of fixed effects
@@ -93,17 +106,64 @@ transformed parameters {
   }
 }
 model {
-  matrix[K, K] G = multiply_lower_tri_self_transpose(diag_pre_multiply(s_G, L_Omega_G));
-  matrix[K, K] E;
-  matrix[N, K] mu = Xs * beta_scaled';
-
+  // Cholesky factors and covariances of G and E.
+  matrix[K, K] L_G = diag_pre_multiply(s_G, L_Omega_G);
+  matrix[K, K] L_E;
   if (unstructured_E)
-    E = multiply_lower_tri_self_transpose(diag_pre_multiply(s_E, L_Omega_E));
+    L_E = diag_pre_multiply(s_E, L_Omega_E);
   else
-    E = diag_matrix(square(s_E));
+    L_E = diag_matrix(s_E);
 
-  for (n in 1:N)
-    Ys[n] ~ multi_normal_cholesky(mu[n], cholesky_decompose(lambda[n] * G + E));
+  // log det E uses the true diagonal. The diagonal is floored only for the
+  // whitening below, so that an extreme HMC proposal (e.g. a residual SD that
+  // underflows to zero) yields a finite, hugely negative log density instead
+  // of NaN/Inf, which would abort the chain.
+  vector[K] log_diag_E = log(diagonal(L_E));
+  for (k in 1:K)
+    L_E[k, k] = fmax(L_E[k, k], 1e-12);
+
+  matrix[K, K] G = L_G * L_G';
+  matrix[K, K] E = L_E * L_E';
+
+  // C = L_E^{-1} L_G is lower triangular, so C C' = L_E^{-1} G L_E^{-T}.
+  matrix[K, K] C = mdivide_left_tri_low(L_E, L_G);
+  matrix[K, K] M = C * C';
+  M = (M + M') / 2; // symmetrize against rounding for the eigendecomposition
+  for (i in 1:K)
+    for (j in 1:K)
+      M[i, j] = fmin(fmax(M[i, j], -1e150), 1e150); // guard overflow in the tails
+  vector[K] d = eigenvalues_sym(M);
+  for (k in 1:K)
+    d[k] = fmax(d[k], 0); // M is PSD; guard rounding before log()
+
+  // Eigenvector gradients are only well defined when the eigenvalues are well
+  // separated. Near-coincident eigenvalues (the identity starting point, or G
+  // proportional to E) fall back to the per-individual Cholesky route.
+  real gap = positive_infinity();
+  for (k in 2:K)
+    gap = fmin(gap, d[k] - d[k - 1]);
+
+  if (gap > 1e-4 * fmax(d[K], 1.0)) {
+    // Fast path: rotate once into the eigenvectors of E^{-1/2} G E^{-1/2}.
+    // Column n of W is L_E^{-1} r_n, and Z[n, k] = u_k' L_E^{-1} r_n.
+    matrix[K, K] U = eigenvectors_sym(M);
+    matrix[N, K] resid = Ys - Xs * beta_scaled';
+    matrix[K, N] W = mdivide_left_tri_low(L_E, resid');
+    matrix[N, K] Z = W' * U;
+
+    // denom[n, k] = 1 + lambda_n d_k
+    matrix[N, K] denom = rep_matrix(1, N, K) + lambda * d';
+    target += -0.5 * (N * K * log(2 * pi())
+                      + 2 * N * sum(log_diag_E)
+                      + sum(log(denom))
+                      + sum(square(Z) ./ denom));
+  } else {
+    // Robust fallback: per-individual Cholesky of lambda_n G + E.
+    matrix[N, K] mu = Xs * beta_scaled';
+    for (n in 1:N)
+      target += multi_normal_cholesky_lpdf(Ys[n] | mu[n],
+                                           cholesky_decompose(lambda[n] * G + E));
+  }
 
   for (k in 1:K)
     for (j in 1:J)
