@@ -10,7 +10,7 @@ ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs
 # lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
 # there is no relatedness, so no G or breeding values.
 all_traits = names(ratonesdf)[12:46]
-traits = all_traits[1:10]
+traits = all_traits[1:35]  # subset to keep the example small (50s on full matrix)
 
 # Size and shape reparametrization: the measurements share a single size
 # gradient, so the model is fit to log size and orthogonal shape axes, and every
