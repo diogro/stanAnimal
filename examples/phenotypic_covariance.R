@@ -1,3 +1,12 @@
+# Phenotypic covariance example (no pedigree)
+#
+# Real mouse morphometric data (35 log-transformed traits). lmm_multiCov() fits
+# the phenotypic covariance matrix P after the fixed effects, so there is no
+# relatedness and no G. Because the measurements share a single size gradient,
+# the traits are reparametrized with size_shape() and every draw is mapped back
+# to the log-trait scale with back_transform(). Run from the project root:
+#   Rscript examples/phenotypic_covariance.R
+
 list_pkgs <- c("dplyr", "bayesplot", "posterior", "cmdstanr", "patchwork")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
@@ -63,7 +72,8 @@ MatrixCompare(P_hat, cov(residuals(lm(log_traits ~ X - 1))))
 
 
 # Plots, all written to a single PDF
-pdf("animalRatones_plots.pdf", width = 10, height = 7)
+dir.create("examples/figures", recursive = TRUE, showWarnings = FALSE)
+pdf("examples/figures/phenotypic_covariance_plots.pdf", width = 10, height = 7)
 bayesplot::color_scheme_set("blue")
 print(bayesplot::mcmc_trace(cov_fit$draws(c("P[1,1]", "P[2,2]", "P[3,3]"))))
 print(bayesplot::mcmc_intervals(beta_draws))

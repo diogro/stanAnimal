@@ -5,7 +5,8 @@
 #               h2 derived as s_G^2 / (s_G^2 + s_E^2)
 #   "h2":       half-normal prior on the total standard deviation and a Beta prior
 #               on h2 (beta_prior, c(1, 1) is flat)
-# Both are fitted here and compared.
+# Both are fitted here and compared. Run from the project root:
+#   Rscript examples/univariate.R
 
 # Install (if needed) and load all dependencies in one go
 pkgs <- c("rstan", "nadiv", "bayesplot", "ggplot2",
@@ -100,7 +101,8 @@ fit_h2$summary(c("h2", "sigma_G", "sigma_E"),
 
 ## Visualization
 # All figures are written to a single PDF
-pdf("simulatedAnimal_univariate_plots.pdf", width = 10, height = 7)
+dir.create("examples/figures", recursive = TRUE, showWarnings = FALSE)
+pdf("examples/figures/univariate_plots.pdf", width = 10, height = 7)
 bayesplot::color_scheme_set("blue")
 
 # Traces for both parametrisations

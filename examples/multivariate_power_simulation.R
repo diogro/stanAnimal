@@ -1,6 +1,7 @@
-# Parallel simulation checker for genetic-correlation recovery in the
-# marginalized multivariate animal model.
-# Run from the project root with: Rscript check_multivariate_power.R
+# Parallel simulation study: recovery of genetic correlations in the
+# marginalized multivariate animal model, across sample sizes and replicates.
+# Results are written to results/ (see STANANIMAL_POWER_OUTPUT below).
+# Run from the project root with: Rscript examples/multivariate_power_simulation.R
 # Set STANANIMAL_POWER_METHOD=gibbs to fit the same datasets with lmm_animal_gibbs.
 
 method <- Sys.getenv("STANANIMAL_POWER_METHOD", "stan")

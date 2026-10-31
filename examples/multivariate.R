@@ -1,3 +1,11 @@
+# Multivariate animal model example
+#
+# Simulates correlated traits on a random pedigree with a known genetic
+# covariance matrix G, fits the marginalized multivariate model with
+# lmm_animal(), and compares the posterior draws of G, E, P, corrG and h2 (and
+# the fixed effects) with the simulated truth. Run from the project root:
+#   Rscript examples/multivariate.R
+
 # Install (if needed) and load all dependencies in one go
 pkgs <- c("mvtnorm", "rstan", "nadiv", "evolqg", "corrplot", "patchwork", "bayesplot",
           "cran/pedtools")  # pedtools is no longer on CRAN -> install from GitHub
@@ -95,7 +103,8 @@ t(beta)
 
 ## Visualization
 # All figures are written to a single PDF
-pdf("simulatedAnimal_plots.pdf", width = 10, height = 7)
+dir.create("examples/figures", recursive = TRUE, showWarnings = FALSE)
+pdf("examples/figures/multivariate_plots.pdf", width = 10, height = 7)
 bayesplot::color_scheme_set("blue")
 
 # Traces and densities
