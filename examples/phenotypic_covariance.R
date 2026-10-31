@@ -1,10 +1,11 @@
 # Phenotypic covariance example (no pedigree)
 #
-# Real mouse morphometric data (35 log-transformed traits). lmm_multiCov() fits
-# the phenotypic covariance matrix P after the fixed effects, so there is no
-# relatedness and no G. Because the measurements share a single size gradient,
-# the traits are reparametrized with size_shape() and every draw is mapped back
-# to the log-trait scale with back_transform(). Run from the project root:
+# Real mouse morphometric data (35 log-transformed traits), bundled with the
+# package as ratones_morpho. lmm_multiCov() fits the phenotypic covariance
+# matrix P after the fixed effects, so there is no relatedness and no G. Because
+# the distances are strongly integrated, the traits are reparametrized
+# with size_shape() and every draw is mapped back to the log-trait scale with
+# back_transform(). Run from the project root:
 #   Rscript examples/phenotypic_covariance.R
 
 list_pkgs <- c("dplyr", "bayesplot", "posterior", "cmdstanr", "patchwork")
@@ -14,7 +15,10 @@ invisible(lapply(sub("^.*/", "", list_pkgs), library, character.only = TRUE))
 
 
 library(stanAnimal)
-ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/ratones.tsv", header = TRUE)
+
+# ratones_morpho ships with the package: 329 mice, 35 cranial distances and the
+# individual information (sex, age, generation, line). No network access needed.
+ratonesdf <- ratones_morpho
 
 # lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
 # there is no relatedness, so no G or breeding values.
