@@ -1,49 +1,48 @@
-list_pkgs <- c("lme4","lmerTest","MCMCglmm","pedantics","pedigreemm", "rstan", "mvtnorm", "bayesplot", "shinystan")
+list_pkgs <- c("dplyr", "bayesplot", "posterior", "cmdstanr")
 new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
 if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 
-library(pedantics)
-library(MCMCglmm)
-library(lme4)
-library(lmerTest)
-library(pedigreemm)
-library(rstan)
-library(mvtnorm)
-library(bayesplot)
-library(shinystan)
-library(ratones)
-rstan_options(auto_write = TRUE)
-options(mc.cores = 10)
+library(stanAnimal)
+ratonesdf <- read.table("https://raw.githubusercontent.com/diogro/evofencom/refs/heads/main/Tutoriais/ratones.tsv", header = TRUE)
+
+# lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
+# there is no relatedness, so no G or breeding values.
+traits = names(dplyr::select(ratonesdf, IS_PM:NA_BR))
+Y = as.matrix(ratonesdf[, traits])
+X = model.matrix(~ SEX + AGE + LIN, data = ratonesdf)
+
+cov_fit = lmm_multiCov(Y, X, lkj_prior = 2, chains = 4, iter = 800,
+                       control = list(adapt_delta = 0.99))
+
+# Summaries and sampler diagnostics
+cov_fit$summary(c("P[1,1]", "P[2,2]", "P[3,3]", "corrP[1,2]", "corrP[1,3]", "corrP[2,3]"))
+cov_fit$diagnostic_summary()
+
+# Fixed effects, named after the columns of X
+beta_draws = animal_draws(cov_fit, "beta")
+posterior::summarise_draws(beta_draws)
+
+# Posterior mean P, compared with the covariance of the residuals
+k = ncol(Y)
+P_hat = matrix(cov_fit$summary("P", "mean")$mean, k)
+dimnames(P_hat) = list(traits, traits)
+round(P_hat, 3)
+round(cov(residuals(lm(Y ~ X - 1))), 3)
+
+library(evolqg)
+MatrixCompare(P_hat, cov(residuals(lm(Y ~ X - 1))))
 
 
-formula = paste0("cbind(",
-                paste(names(dplyr::select(ratonesdf, IS_PM:IS_PNS)),
-                      collapse = ", "), ") ~ SEX + AGE + LIN")
-stan_data = generateAnimalModelInput(formula, ratonesdf,
-                                     ratones_ped$A,
-                                     line = "all")
-stan_model = stan(file = "./animalModel.stan", data = stan_data, chains = 1, 
-                  iter = 800,
-                  control = list(adapt_delta = 0.99))
-model = rstan::extract(stan_model)
-rstan::summary(stan_model, pars = "G")[[1]]
-rstan::plot(stan_model, pars = "beta")
-rstan::traceplot(stan_model, pars = "G")
-rstan::traceplot(stan_model, pars = "E")
-colMeans(model$G)
-plot(colMeans(model$a), a)
-colMeans(model$E)
-colMeans(model$beta)
-t(beta)
-mcmc_intervals( 
-  as.array(stan_model),  
-  pars = c("G[1,1]", "G[2,2]", "G[3,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean")
-mcmc_intervals( 
-  as.array(stan_model),  
-  pars = c("corrG[1,2]", "corrG[1,3]", "corrG[2,3]"),
-  prob = 0.8, # 80% intervals
-  prob_outer = 0.99, # 99%
-  point_est = "mean")
+# Plots, all written to a single PDF
+pdf("animalRatones_plots.pdf", width = 10, height = 7)
+bayesplot::color_scheme_set("blue")
+print(bayesplot::mcmc_trace(cov_fit$draws(c("P[1,1]", "P[2,2]", "P[3,3]"))))
+print(bayesplot::mcmc_intervals(beta_draws))
+print(bayesplot::mcmc_intervals(
+  cov_fit$draws(), pars = c("P[1,1]", "P[2,2]", "P[3,3]"),
+  prob = 0.8, prob_outer = 0.99, point_est = "mean"))
+print(bayesplot::mcmc_intervals(
+  cov_fit$draws(), pars = c("corrP[1,2]", "corrP[1,3]", "corrP[2,3]"),
+  prob = 0.8, prob_outer = 0.99, point_est = "mean"))
+print(plot_corr(cov2cor(P_hat), "Posterior mean phenotypic correlations"))
+dev.off()

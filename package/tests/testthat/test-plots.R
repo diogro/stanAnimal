@@ -51,3 +51,12 @@ test_that("plot_G_ellipses builds", {
   expect_no_error(ggplot2::ggplot_build(p))
   expect_error(plot_G_ellipses(d, Y[, 1, drop = FALSE]), "two traits")
 })
+
+test_that("plot_corr builds and keeps matrix labels", {
+  M <- stats::cor(mtcars[, 1:4])
+  p <- plot_corr(M, "t")
+  expect_s3_class(p, "ggplot")
+  expect_equal(levels(p$data$Var1), colnames(M))
+  expect_no_error(ggplot2::ggplot_build(p))
+  expect_s3_class(plot_corr(unname(M)), "ggplot")
+})

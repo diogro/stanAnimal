@@ -13,6 +13,7 @@ Imports:
     rstan (>= 2.18.1),
     cmdstanr,
     ggplot2,
+    grid,
     posterior,
     tools,
     utils

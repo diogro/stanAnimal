@@ -312,3 +312,36 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+#' Heatmap of a correlation matrix
+#'
+#' @param M Correlation matrix, with optional row and column names.
+#' @param title Plot title.
+#' @return A ggplot object with a diverging red-blue scale fixed to [-1, 1].
+#' @examples
+#' plot_corr(stats::cor(mtcars[, 1:5]), "mtcars")
+#' @export
+plot_corr <- function(M, title = "") {
+  M <- as.matrix(M)
+  rn <- rownames(M) %||% seq_len(nrow(M))
+  cn <- colnames(M) %||% seq_len(ncol(M))
+  d <- data.frame(Var1 = factor(rep(rn, times = ncol(M)), levels = rn),
+                  Var2 = factor(rep(cn, each = nrow(M)), levels = cn),
+                  value = as.vector(M))
+  rdbu <- c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7", "#F7F7F7",
+            "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061")
+  ggplot2::ggplot(d, ggplot2::aes(.data$Var1, .data$Var2, fill = .data$value)) +
+    ggplot2::geom_tile() +
+    ggplot2::scale_fill_gradientn(colours = rdbu, limits = c(-1, 1),
+                                  breaks = c(-1, -0.5, 0, 0.5, 1)) +
+    ggplot2::labs(x = "Traits", y = "", title = title) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(legend.position = "bottom",
+                   legend.key.width = grid::unit(1.5, "cm"),
+                   legend.title = ggplot2::element_blank(),
+                   panel.grid = ggplot2::element_blank(),
+                   plot.title = ggplot2::element_text(size = 14),
+                   axis.title = ggplot2::element_text(size = 12),
+                   axis.text.y = ggplot2::element_text(size = 6),
+                   axis.text.x = ggplot2::element_text(size = 6, angle = 90))
+}
