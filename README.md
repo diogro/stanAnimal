@@ -81,7 +81,7 @@ The multivariate model estimates `G` and the residual covariance `E` directly. E
 
 ## Phenotypic covariance only (P)
 
-With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`:
+With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`. The likelihood is a single whitened triangular solve, $O(NK^2 + K^3)$, so it also scales to dozens of traits:
 
 ```r
 fit <- lmm_multiCov(Y, X, lkj_prior = 2)

@@ -74,11 +74,25 @@ transformed parameters {
   }
 }
 model {
-  matrix[N, K] mu = Xs * beta_scaled';
+  // Cholesky factor of P on the standardized response scale.
   matrix[K, K] L_P = diag_pre_multiply(s_P, L_Omega_P);
 
-  for (n in 1:N)
-    Ys[n] ~ multi_normal_cholesky(mu[n], L_P);
+  // log det P uses the true diagonal. The diagonal is floored only for the
+  // whitening below, so that an extreme proposal (a correlation at the
+  // boundary, or a scale underflowing to zero) yields a finite, hugely
+  // negative log density instead of NaN/Inf, which would abort the chain.
+  vector[K] log_diag_P = log(diagonal(L_P));
+  for (k in 1:K)
+    L_P[k, k] = fmax(L_P[k, k], 1e-12);
+
+  // Whitened residuals: column n of W is L_P^{-1} r_n, so sum(square(W)) is
+  // the quadratic form of the multivariate normal log density. Computing it
+  // with one triangular solve costs O(N K^2) and avoids a per-individual loop.
+  matrix[N, K] resid = Ys - Xs * beta_scaled';
+  matrix[K, N] W = mdivide_left_tri_low(L_P, resid');
+  target += -0.5 * (N * K * log(2 * pi())
+                    + 2 * N * sum(log_diag_P)
+                    + sum(square(W)));
 
   for (k in 1:K)
     for (j in 1:J)
