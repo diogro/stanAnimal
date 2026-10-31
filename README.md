@@ -192,6 +192,10 @@ Models fit with cmdstanr are compiled once and the executable is reused in later
 
 `lmm_animal_gibbs()` is a quick single-chain Gibbs sampler for simulations and sanity checks. Its priors (inverse-Wishart) differ from those in `lmm_animal()`, so the results are not directly interchangeable.
 
+# Examples
+
+Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
+
 # Example
 
 ```r

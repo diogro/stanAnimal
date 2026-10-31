@@ -98,12 +98,22 @@ bayesplot::color_scheme_set("blue")
 print(bayesplot::mcmc_trace(gibbs_draws,
                             pars = c("G11", "G12", "G22", "R11", "R22")))
 
-# Posterior intervals with the simulated truth as a reference line
+# Posterior intervals with the simulated truth as red diamonds
+# Named in the same order as the columns of gibbs_draws.
 truth <- c(
   G11 = G[1, 1], G12 = G[1, 2], G22 = G[2, 2],
   R11 = E[1, 1], R12 = E[1, 2], R22 = E[2, 2],
   `h2[t1]` = h2_true[1], `h2[t2]` = h2_true[2])
-print(bayesplot::mcmc_intervals(gibbs_draws, prob = 0.8, prob_outer = 0.99,
-                                point_est = "mean") +
-        ggplot2::geom_vline(xintercept = truth[posterior::variables(gibbs_draws)]))
+
+pars <- posterior::variables(gibbs_draws)
+print(
+  bayesplot::mcmc_intervals(gibbs_draws, pars = pars, prob = 0.8,
+                            prob_outer = 0.99, point_est = "mean") +
+    # mcmc_intervals puts the parameters on y = 1..k in the order of pars, with
+    # the names only as axis labels, so the truths are overlaid by position.
+    ggplot2::geom_point(
+      data = data.frame(value = unname(truth[pars]), y = seq_along(pars)),
+      mapping = ggplot2::aes(x = value, y = y),
+      colour = "red", size = 2.2, shape = 18, inherit.aes = FALSE) +
+    ggplot2::labs(caption = "Red diamonds: simulated values."))
 dev.off()

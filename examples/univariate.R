@@ -120,12 +120,17 @@ sampler_checks = function(fit) {
 sampler_checks(fit_var)
 sampler_checks(fit_h2)
 
-# Intervals with the simulated truth as a reference line
+# Intervals with the simulated truth as red diamonds
+# mcmc_intervals puts the parameters on y = 1..k in the order of pars, with the
+# names only as axis labels, so the truths are overlaid by position.
 interval_plot = function(fit, pars, truth) {
   bayesplot::mcmc_intervals(
     fit$draws(), pars = pars,
     prob = 0.8, prob_outer = 0.99, point_est = "mean") +
-    ggplot2::geom_vline(xintercept = truth)
+    ggplot2::geom_point(
+      data = data.frame(value = unname(truth), y = seq_along(pars)),
+      mapping = ggplot2::aes(x = value, y = y),
+      colour = "red", size = 2.2, shape = 18, inherit.aes = FALSE)
 }
 print(interval_plot(fit_var, c("h2", "sigma_G", "sigma_E"), truth))
 print(interval_plot(fit_h2, c("h2", "sigma_G", "sigma_E"), truth))
