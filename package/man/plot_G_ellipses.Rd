@@ -24,9 +24,9 @@ or a \code{posterior} draws object containing \code{G} and, when
 \item{trait_names}{Optional trait names; default are the column names of
 \code{Y}.}
 
-\item{n_show}{Number of posterior draws of G to draw.}
+\item{n_show}{Number of posterior draws of G to draw, at least 1.}
 
-\item{level}{Probability level of the ellipses.}
+\item{level}{Probability level of the ellipses, between 0 and 1.}
 
 \item{prob}{Probability mass of the HPD interval of the correlations.}
 

@@ -45,8 +45,18 @@
 * The `?size_shape` documentation explains what the reparametrization does to
   the LKJ prior, and that a larger `lkj_prior` is often reasonable for shape
   axes.
+* `animal_prior_draws()`, `plot_prior_posterior()` and `plot_forest()` no
+  longer take `unstructured_E`, which they accepted but never used. The
+  residual correlation structure cannot change these draws: heritability uses
+  only the diagonal of the residual covariance and the genetic correlations
+  come from `G`. `?animal_prior_draws` says so.
 
 ## Bug fixes
+
+* `plot_forest()` now checks `prob` and `plot_G_ellipses()` checks `prob`,
+  `level` and `n_show`, so a level of 2 or a negative number of draws is a
+  message naming the argument instead of a failure inside the interval or
+  ellipse calculation.
 
 * The `control` list now reaches both engines. With `cmdstanr`, only
   `adapt_delta` and `max_treedepth` were forwarded and every other entry was

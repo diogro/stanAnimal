@@ -102,3 +102,39 @@ test_that("plot_G_ellipses validates X", {
   expect_error(plot_G_ellipses(d, Y, X = cbind(1, stats::rnorm(30),
                                                 stats::rnorm(30))), "fixed effects")
 })
+
+test_that("plot_G_ellipses validates the interval and ellipse arguments", {
+  set.seed(2)
+  Y <- cbind(a = stats::rnorm(40), b = stats::rnorm(40))
+  v <- c("G[1,1]", "G[2,1]", "G[1,2]", "G[2,2]")
+  G <- replicate(20, c(crossprod(matrix(stats::rnorm(6, sd = 0.3), 3, 2)) +
+                         diag(0.3, 2)))
+  d <- posterior::as_draws_array(array(t(G), c(20, 1, 4),
+                                       dimnames = list(NULL, NULL, v)))
+  expect_error(plot_G_ellipses(d, Y, level = 0), "`level`")
+  expect_error(plot_G_ellipses(d, Y, level = 1), "`level`")
+  expect_error(plot_G_ellipses(d, Y, level = -0.5), "`level`")
+  expect_error(plot_G_ellipses(d, Y, level = c(0.5, 0.9)), "`level`")
+  expect_error(plot_G_ellipses(d, Y, prob = NA_real_), "`prob`")
+  expect_error(plot_G_ellipses(d, Y, prob = 1.5), "`prob`")
+  expect_error(plot_G_ellipses(d, Y, n_show = 0), "`n_show`")
+  expect_error(plot_G_ellipses(d, Y, n_show = -3), "`n_show`")
+  expect_error(plot_G_ellipses(d, Y, n_show = "10"), "`n_show`")
+  expect_s3_class(plot_G_ellipses(d, Y, level = 0.5, prob = 0.9, n_show = 3),
+                  "ggplot")
+})
+
+test_that("plot_forest validates prob", {
+  skip_if_not_installed("ggplot2")
+  vars <- c("h2[1]", "h2[2]", "corrG[1,2]", "corrG[2,1]")
+  fit <- posterior::as_draws_array(array(
+    stats::runif(100 * 2 * 4), c(100, 2, 4), dimnames = list(NULL, NULL, vars)))
+  expect_error(plot_forest(fit, n_prior = 100, prob = 0), "`prob`")
+  expect_error(plot_forest(fit, n_prior = 100, prob = 1), "`prob`")
+  expect_error(plot_forest(fit, n_prior = 100, prob = Inf), "`prob`")
+  expect_error(plot_forest(fit, n_prior = 100, prob = c(0.5, 0.9)), "`prob`")
+  p <- plot_forest(fit, n_prior = 100, prob = 0.5)
+  expect_s3_class(p, "ggplot")
+  # the interval reported in the axis label follows prob
+  expect_match(p$labels$x, "50%")
+})

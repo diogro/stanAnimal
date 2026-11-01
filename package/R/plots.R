@@ -7,16 +7,22 @@
 #' @param n_traits Number of traits.
 #' @param n Number of prior draws.
 #' @param lkj_prior LKJ shape used in the fit.
-#' @param unstructured_E If \code{FALSE}, the residual covariance is diagonal.
 #' @param trait_names Optional trait names.
 #' @return A long data frame with columns \code{type} (\code{"Heritability"} or
 #'   \code{"Genetic correlation"}), \code{parameter} and \code{value}.
 #' @details Standard deviations are half-normal(0, 1) and correlation matrices
 #'   are LKJ(\code{lkj_prior}), as in the Stan models. Univariate fits use the
 #'   default \code{parametrization = "variance"} prior.
+#'
+#'   The residual correlation structure of the fit does not enter these draws:
+#'   heritability divides the genetic variance by the phenotypic variance, which
+#'   only uses the diagonal of the residual covariance, and the genetic
+#'   correlations come from the correlation matrix of \code{G}. So
+#'   \code{residual_structure} makes no difference here, and there is no
+#'   argument for it.
 #' @export
 animal_prior_draws <- function(n_traits, n = 4000, lkj_prior = 2,
-                               unstructured_E = TRUE, trait_names = NULL) {
+                               trait_names = NULL) {
   trait_names <- .trait_names(trait_names, n_traits)
   h2 <- matrix(NA_real_, n, n_traits, dimnames = list(NULL, trait_names))
   pairs <- .trait_pairs(trait_names)
@@ -66,7 +72,7 @@ animal_parameter_draws <- function(fit, trait_names = NULL) {
 #' Posterior versus prior for heritabilities and genetic correlations
 #'
 #' @inheritParams animal_parameter_draws
-#' @param lkj_prior,unstructured_E,n_prior Passed to \code{\link{animal_prior_draws}}
+#' @param lkj_prior,n_prior Passed to \code{\link{animal_prior_draws}}
 #'   (\code{n_prior} is \code{n}).
 #' @param prior Optional prior draws in the format returned by
 #'   \code{animal_prior_draws}; computed if \code{NULL}.
@@ -76,9 +82,8 @@ animal_parameter_draws <- function(fit, trait_names = NULL) {
 #' @details Where prior and posterior overlap, the data add little information.
 #' @export
 plot_prior_posterior <- function(fit, trait_names = NULL, lkj_prior = 2,
-                                 unstructured_E = TRUE, n_prior = 4000,
-                                 prior = NULL, ncol = 4) {
-  d <- .prior_posterior(fit, trait_names, lkj_prior, unstructured_E, n_prior, prior)
+                                 n_prior = 4000, prior = NULL, ncol = 4) {
+  d <- .prior_posterior(fit, trait_names, lkj_prior, n_prior, prior)
   ggplot2::ggplot(d, ggplot2::aes(.data$value, fill = .data$source, colour = .data$source)) +
     ggplot2::geom_density(alpha = 0.35, adjust = 1.2) +
     ggplot2::facet_wrap(ggplot2::vars(.data$parameter), scales = "free_y", ncol = ncol) +
@@ -91,13 +96,13 @@ plot_prior_posterior <- function(fit, trait_names = NULL, lkj_prior = 2,
 }
 
 #' @rdname plot_prior_posterior
-#' @param prob Probability mass of the highest density interval.
+#' @param prob Probability mass of the highest density interval, between 0 and 1.
 #' @param ncol Number of facet columns for \code{plot_prior_posterior}.
 #' @export
 plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
-                        unstructured_E = TRUE, n_prior = 4000,
-                        prior = NULL, prob = 0.95) {
-  d <- .prior_posterior(fit, trait_names, lkj_prior, unstructured_E, n_prior, prior)
+                        n_prior = 4000, prior = NULL, prob = 0.95) {
+  prob <- .check_prob(prob, "prob")
+  d <- .prior_posterior(fit, trait_names, lkj_prior, n_prior, prior)
   groups <- split(d, list(d$type, d$parameter, d$source), drop = TRUE)
   s <- do.call(rbind, lapply(groups, function(g) {
     hdi <- .hdi(g$value, prob)
@@ -121,12 +126,11 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 .source_colours <- list(fill = c(Posterior = "firebrick", Prior = "grey60"),
                         line = c(Posterior = "firebrick", Prior = "grey40"))
 
-.prior_posterior <- function(fit, trait_names, lkj_prior, unstructured_E,
-                             n_prior, prior) {
+.prior_posterior <- function(fit, trait_names, lkj_prior, n_prior, prior) {
   post <- animal_parameter_draws(fit, trait_names)
   if (is.null(prior)) {
     k <- length(unique(post$parameter[post$type == "Heritability"]))
-    prior <- animal_prior_draws(k, n_prior, lkj_prior, unstructured_E,
+    prior <- animal_prior_draws(k, n_prior, lkj_prior,
                                 unique(post$parameter[post$type == "Heritability"]))
   }
   d <- rbind(post, prior)
@@ -135,6 +139,18 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
   d$type <- factor(d$type, levels = c("Heritability", "Genetic correlation"))
   d$parameter <- factor(d$parameter, levels = unique(post$parameter))
   d[order(d$type), ]
+}
+
+.check_prob <- function(x, arg) {
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0 || x >= 1)
+    stop("`", arg, "` must be one number strictly between 0 and 1.", call. = FALSE)
+  as.numeric(x)
+}
+
+.check_n_show <- function(n_show) {
+  if (!is.numeric(n_show) || length(n_show) != 1L || !is.finite(n_show) || n_show < 1)
+    stop("`n_show` must be a single number of draws, at least 1.", call. = FALSE)
+  as.integer(n_show)
 }
 
 .trait_names <- function(trait_names, k) {
@@ -208,8 +224,8 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 #' @param Y Matrix of the observed traits (the \code{Y} given to the fit).
 #' @param trait_names Optional trait names; default are the column names of
 #'   \code{Y}.
-#' @param n_show Number of posterior draws of G to draw.
-#' @param level Probability level of the ellipses.
+#' @param n_show Number of posterior draws of G to draw, at least 1.
+#' @param level Probability level of the ellipses, between 0 and 1.
 #' @param prob Probability mass of the HPD interval of the correlations.
 #' @param X Optional fixed-effects design matrix (the \code{X} given to the
 #'   fit). When supplied, the traits are replaced by their residuals,
@@ -228,6 +244,9 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 #' @export
 plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
                             level = 0.95, prob = 0.95, X = NULL) {
+  n_show <- .check_n_show(n_show)
+  level <- .check_prob(level, "level")
+  prob <- .check_prob(prob, "prob")
   Y <- as.matrix(Y)
   k <- ncol(Y)
   if (k < 2L) stop("At least two traits are needed.")

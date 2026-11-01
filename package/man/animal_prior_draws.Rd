@@ -4,13 +4,7 @@
 \alias{animal_prior_draws}
 \title{Prior draws for heritabilities and genetic correlations}
 \usage{
-animal_prior_draws(
-  n_traits,
-  n = 4000,
-  lkj_prior = 2,
-  unstructured_E = TRUE,
-  trait_names = NULL
-)
+animal_prior_draws(n_traits, n = 4000, lkj_prior = 2, trait_names = NULL)
 }
 \arguments{
 \item{n_traits}{Number of traits.}
@@ -18,8 +12,6 @@ animal_prior_draws(
 \item{n}{Number of prior draws.}
 
 \item{lkj_prior}{LKJ shape used in the fit.}
-
-\item{unstructured_E}{If \code{FALSE}, the residual covariance is diagonal.}
 
 \item{trait_names}{Optional trait names.}
 }
@@ -36,4 +28,11 @@ genetic correlations, which do not depend on the scale of the data.
 Standard deviations are half-normal(0, 1) and correlation matrices
   are LKJ(\code{lkj_prior}), as in the Stan models. Univariate fits use the
   default \code{parametrization = "variance"} prior.
+
+  The residual correlation structure of the fit does not enter these draws:
+  heritability divides the genetic variance by the phenotypic variance, which
+  only uses the diagonal of the residual covariance, and the genetic
+  correlations come from the correlation matrix of \code{G}. So
+  \code{residual_structure} makes no difference here, and there is no
+  argument for it.
 }

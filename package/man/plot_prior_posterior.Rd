@@ -9,7 +9,6 @@ plot_prior_posterior(
   fit,
   trait_names = NULL,
   lkj_prior = 2,
-  unstructured_E = TRUE,
   n_prior = 4000,
   prior = NULL,
   ncol = 4
@@ -19,7 +18,6 @@ plot_forest(
   fit,
   trait_names = NULL,
   lkj_prior = 2,
-  unstructured_E = TRUE,
   n_prior = 4000,
   prior = NULL,
   prob = 0.95
@@ -32,7 +30,7 @@ traits, \code{corrG}.}
 
 \item{trait_names}{Optional trait names.}
 
-\item{lkj_prior, unstructured_E, n_prior}{Passed to \code{\link{animal_prior_draws}}
+\item{lkj_prior, n_prior}{Passed to \code{\link{animal_prior_draws}}
 (\code{n_prior} is \code{n}).}
 
 \item{prior}{Optional prior draws in the format returned by
@@ -40,7 +38,7 @@ traits, \code{corrG}.}
 
 \item{ncol}{Number of facet columns for \code{plot_prior_posterior}.}
 
-\item{prob}{Probability mass of the highest density interval.}
+\item{prob}{Probability mass of the highest density interval, between 0 and 1.}
 }
 \value{
 A ggplot object. \code{plot_prior_posterior} shows overlaid densities
