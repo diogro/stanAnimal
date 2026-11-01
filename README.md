@@ -19,7 +19,7 @@ Requires R 4.0.0 or later.
 
 # Quick start with the bundled data
 
-Two datasets from the mouse artificial-selection experiment of Penna et al. (2017) ship with the package:
+Two datasets from the mouse artificial-selection experiment of [Penna et al. (2017)](https://doi.org/10.1111/evo.13304) ship with the package:
 
 - `ratones_morpho`: 329 mice with 35 cranial distances plus sex, age, generation and selection line, one row per individual;
 - `ratones_pedigree`: the pedigree of the 525 individuals of the experiment, ancestors included.
