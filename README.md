@@ -1,6 +1,6 @@
 # stanAnimal
 
-Bayesian animal models in Stan, with a focus on estimating the **additive genetic covariance matrix (G)** of one or more traits from a known relationship matrix.
+Bayesian animal models in Stan, with a focus on estimating the **additive genetic covariance matrix (G)** of one or more traits from a known relationship matrix. The intended niche is many traits measured on a moderate number of individuals: the cost that grows with the number of traits is the likelihood, and the one that grows with the number of individuals is the dense relationship matrix (see the cost notes under [Multivariate model](#multivariate-model)).
 
 Fits use [CmdStan](https://mc-stan.org/cmdstanr/) through `cmdstanr` (default) or `rstan`.
 
@@ -161,6 +161,7 @@ The multivariate model estimates `G` and the residual covariance `E` directly. E
 - Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and the likelihood only needs the eigenvalues of `A`, which is why a singular `A` works once it is regularized with `blend_A = TRUE`.
 - The per-individual likelihoods are also whitened by the residual Cholesky factor and rotated into a single eigendecomposition of $E^{-1/2}GE^{-1/2}$, so an evaluation costs $O(NK^2 + K^3)$ rather than $O(NK^3)$. The model scales to dozens of traits (e.g. 40) without per-individual Cholesky factorizations. When the eigenvalues of $E^{-1/2}GE^{-1/2}$ are nearly coincident (at initialization, or when `G` is roughly proportional to `E`), the model automatically falls back to a per-individual Cholesky evaluation, whose gradient is well behaved.
 - Fitting many traits is still computationally heavy even though the likelihood is cheap: an unstructured `G` at `K = 40` has roughly 1,700 parameters, and NUTS needs many leapfrog steps, so one fit can take an hour or more. Fewer `iter`, a larger `lkj_prior`, or `residual_structure = "diagonal"` make fits faster.
+- The side that does not scale is the number of individuals. `A` is dense, so the models receive all $N \times N$ of it and each chain eigendecomposes it at startup: $O(N^3)$ time and $O(N^2)$ memory per chain before the first iteration — a couple of seconds at 1,000 individuals, around half a minute at 2,000, and minutes beyond 4,000. Once that is paid, an evaluation is only linear in $N$, so the number of traits is what usually limits a fit. This package therefore targets many traits on hundreds to a few thousand individuals; for cohorts in the tens of thousands, where the dense relationship matrix is the bottleneck, an engine that works with the sparse inverse of `A` (such as [ASReml](https://asreml.locustware.com/)) is the better tool.
 
 ## Size and shape reparametrization (use this when one PC dominates)
 

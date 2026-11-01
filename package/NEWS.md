@@ -25,6 +25,12 @@
   installation command when neither is present. The fallback warning used to
   suggest a malformed `install_github()` call.
 
+* The README and `?lmm_animal` now state the cost that grows with the number of
+  individuals, which the trait-oriented cost notes did not mention: `A` is dense,
+  so each chain decomposes it before sampling. The package targets many traits on
+  hundreds to a few thousand individuals, and cohorts of tens of thousands are
+  pointed to engines that use the sparse inverse of `A`, such as ASReml.
+
 * The package no longer needs `nadiv`, which was only used to build `A` from a
   pedigree: `makeA()` replaces it, so nothing has to be installed for the
   pedigree path and it works on the same R versions as the rest of the package.
