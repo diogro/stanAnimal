@@ -166,8 +166,8 @@ design <- animal_design(cbind(size, shape1, shape2, shape3) ~ sex + site, dat)
 fit <- lmm_animal(design$Y, design$X, A)
 
 post <- back_transform(fit, ss)               # G, E, P, corrG, corrP and h2 on the log scale
-apply(post$G, c(2, 3), mean)                  # posterior mean G
-apply(post$h2, 2, mean)                       # posterior mean h2 per trait
+apply(post$G, c(1, 2), mean)                  # posterior mean G
+apply(post$h2, 1, mean)                       # posterior mean h2 per trait
 ```
 
 `animal_design()` warns automatically when the response has three or more traits and its first principal component explains 80% or more of the variance.

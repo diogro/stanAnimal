@@ -16,12 +16,13 @@ phenotypic fit from \code{\link{lmm_multiCov}}.}
 }
 \value{
 A list of class \code{size_shape_draws} holding one element per
-  quantity, every array indexed by draw first and named after the original
-  traits. For an animal fit it holds \code{G}, \code{E}, \code{P},
-  \code{corrG} and \code{corrP} as \code{draws} by \code{traits} by
-  \code{traits} arrays, and \code{h2} as a \code{draws} by \code{traits}
-  matrix. For a phenotypic fit it holds \code{P} and \code{corrP} as arrays
-  and \code{sigma_P} as a matrix. \code{traits} holds the trait names.
+  quantity, in the same layout as \code{\link{lmm_animal_gibbs}}: traits
+  first and draws last, with every dimension named after the traits. For an
+  animal fit it holds \code{G}, \code{E}, \code{P}, \code{corrG} and
+  \code{corrP} as \code{traits} by \code{traits} by \code{draws} arrays,
+  and \code{h2} as a \code{traits} by \code{draws} matrix. For a
+  phenotypic fit it holds \code{P} and \code{corrP} as arrays and
+  \code{sigma_P} as a matrix. \code{traits} holds the trait names.
 }
 \description{
 Takes a fit of the size and shape scores made with
@@ -40,9 +41,10 @@ For each draw the covariance matrices are mapped as
   The fixed effects \code{beta} stay on the model scale, since a coefficient
   for size or a shape axis does not correspond to a single original trait.
 
-  The draws come first, so posterior summaries are one \code{apply()} away:
-  \code{apply(post$G, c(2, 3), mean)} is the posterior mean of \code{G} on
-  the trait scale, and \code{apply(post$corrG, c(2, 3), quantile, 0.05)} its
+  Draws are the last dimension, as in \code{\link{lmm_animal_gibbs}}, so
+  posterior summaries are one \code{apply()} away:
+  \code{apply(post$G, c(1, 2), mean)} is the posterior mean of \code{G} on
+  the trait scale, and \code{apply(post$corrG, c(1, 2), quantile, 0.05)} its
   5\% quantile.
 }
 \examples{
@@ -55,9 +57,9 @@ m <- cbind(matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE),
            matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE))
 colnames(m) <- c(names_mat("G"), names_mat("E"))
 post <- back_transform(m, ss)
-dim(post$G)
-apply(post$G, c(2, 3), mean)   # posterior mean G on the trait scale
-apply(post$h2, 2, mean)
+dim(post$G)                    # traits x traits x draws
+apply(post$G, c(1, 2), mean)   # posterior mean G on the trait scale
+apply(post$h2, 1, mean)
 }
 \seealso{
 \code{\link{size_shape}}, \code{\link{animal_draws}}

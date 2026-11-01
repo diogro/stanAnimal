@@ -59,17 +59,18 @@ beta_draws = animal_draws(cov_fit, "beta")
 posterior::summarise_draws(beta_draws)
 
 # Back-transform every draw to the log-trait scale. The result is a list of
-# arrays indexed by draw first: P and corrP are draws x traits x traits, and
-# sigma_P is draws x traits, all named after the traits
+# arrays indexed by trait first and draw last, as lmm_animal_gibbs() returns
+# them: P and corrP are traits x traits x draws and sigma_P is traits x draws,
+# all named after the traits
 post = back_transform(cov_fit, ss)
 post
 k = length(traits)
 
-round(apply(post$sigma_P, 2, mean), 3)
-round(apply(post$corrP, c(2, 3), mean)[1:3, 1:3], 3)
+round(apply(post$sigma_P, 1, mean), 3)
+round(apply(post$corrP, c(1, 2), mean)[1:3, 1:3], 3)
 
 # Posterior mean P on the log-trait scale, compared with the residual covariance
-P_hat = apply(post$P, c(2, 3), mean)
+P_hat = apply(post$P, c(1, 2), mean)
 round(P_hat, 3)
 round(cov(residuals(lm(log_traits ~ X - 1))), 3)
 
@@ -84,10 +85,10 @@ bayesplot::color_scheme_set("blue")
 print(bayesplot::mcmc_trace(cov_fit$draws(c("P[1,1]", "P[2,2]", "P[3,3]"))))
 print(bayesplot::mcmc_intervals(beta_draws))
 print(bayesplot::mcmc_intervals(
-  post$sigma_P[, 1:3], prob = 0.8, prob_outer = 0.99, point_est = "mean"))
+  t(post$sigma_P[1:3, ]), prob = 0.8, prob_outer = 0.99, point_est = "mean"))
 print(bayesplot::mcmc_intervals(
-  cbind(`corrP[1,2]` = post$corrP[, 1, 2], `corrP[1,3]` = post$corrP[, 1, 3],
-        `corrP[2,3]` = post$corrP[, 2, 3]),
+  cbind(`corrP[1,2]` = post$corrP[1, 2, ], `corrP[1,3]` = post$corrP[1, 3, ],
+        `corrP[2,3]` = post$corrP[2, 3, ]),
   prob = 0.8, prob_outer = 0.99, point_est = "mean"))
 print(plot_corr(cov2cor(P_hat), "Posterior mean phenotypic correlations") +
 plot_corr(cov2cor(cov(residuals(lm(log_traits ~ X - 1)))), "Residual correlations"))

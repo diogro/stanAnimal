@@ -137,10 +137,11 @@ rbind(traits = c(elapsed = time_traits[["elapsed"]],
                      sampling = fit_ss$time()$total))
 
 # G on the measured trait scale, from both fits. back_transform() returns G as a
-# draws by traits by traits array, already named after the traits
+# traits by traits by draws array, already named after the traits, the same
+# layout lmm_animal_gibbs() uses
 post_ss <- back_transform(fit_ss, ss)
 G_traits <- post_mean("G")
-G_size_shape <- apply(post_ss$G, c(2, 3), mean)
+G_size_shape <- apply(post_ss$G, c(1, 2), mean)
 round(G_traits, 4)
 round(G_size_shape, 4)
 # Largest difference between the two estimates, relative to the largest element

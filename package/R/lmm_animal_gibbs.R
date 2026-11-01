@@ -15,7 +15,9 @@
 #' @return A list of posterior draws: \code{G} and \code{R} are covariance
 #'   arrays, \code{beta} contains fixed-effect matrix draws, \code{h2}
 #'   contains trait-wise variance ratios, and \code{iterations} gives the
-#'   retained iteration numbers.
+#'   retained iteration numbers. Quantities are indexed by trait first and draw
+#'   last, from named dimensions, the layout that
+#'   \code{\link{back_transform}} returns as well.
 #' @details Fixed effects have an improper flat prior. Genetic and residual
 #'   covariance matrices have inverse-Wishart priors with degrees of freedom
 #'   \code{K + 1} and scale matrix \code{(K + 1) I / 2}, where \code{K} is

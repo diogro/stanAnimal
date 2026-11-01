@@ -26,7 +26,9 @@ order of \code{Y}; names that disagree are an error.}
 A list of posterior draws: \code{G} and \code{R} are covariance
   arrays, \code{beta} contains fixed-effect matrix draws, \code{h2}
   contains trait-wise variance ratios, and \code{iterations} gives the
-  retained iteration numbers.
+  retained iteration numbers. Quantities are indexed by trait first and draw
+  last, from named dimensions, the layout that
+  \code{\link{back_transform}} returns as well.
 }
 \description{
 Fits a univariate or multivariate linear animal model with fixed effects and relatedness

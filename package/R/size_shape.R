@@ -153,12 +153,13 @@ print.size_shape <- function(x, ...) {
 #'   phenotypic fit from \code{\link{lmm_multiCov}}.
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
 #' @return A list of class \code{size_shape_draws} holding one element per
-#'   quantity, every array indexed by draw first and named after the original
-#'   traits. For an animal fit it holds \code{G}, \code{E}, \code{P},
-#'   \code{corrG} and \code{corrP} as \code{draws} by \code{traits} by
-#'   \code{traits} arrays, and \code{h2} as a \code{draws} by \code{traits}
-#'   matrix. For a phenotypic fit it holds \code{P} and \code{corrP} as arrays
-#'   and \code{sigma_P} as a matrix. \code{traits} holds the trait names.
+#'   quantity, in the same layout as \code{\link{lmm_animal_gibbs}}: traits
+#'   first and draws last, with every dimension named after the traits. For an
+#'   animal fit it holds \code{G}, \code{E}, \code{P}, \code{corrG} and
+#'   \code{corrP} as \code{traits} by \code{traits} by \code{draws} arrays,
+#'   and \code{h2} as a \code{traits} by \code{draws} matrix. For a
+#'   phenotypic fit it holds \code{P} and \code{corrP} as arrays and
+#'   \code{sigma_P} as a matrix. \code{traits} holds the trait names.
 #' @details For each draw the covariance matrices are mapped as
 #'   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
 #'   reparametrization of the traits. Heritabilities and correlations are then
@@ -169,9 +170,10 @@ print.size_shape <- function(x, ...) {
 #'   The fixed effects \code{beta} stay on the model scale, since a coefficient
 #'   for size or a shape axis does not correspond to a single original trait.
 #'
-#'   The draws come first, so posterior summaries are one \code{apply()} away:
-#'   \code{apply(post$G, c(2, 3), mean)} is the posterior mean of \code{G} on
-#'   the trait scale, and \code{apply(post$corrG, c(2, 3), quantile, 0.05)} its
+#'   Draws are the last dimension, as in \code{\link{lmm_animal_gibbs}}, so
+#'   posterior summaries are one \code{apply()} away:
+#'   \code{apply(post$G, c(1, 2), mean)} is the posterior mean of \code{G} on
+#'   the trait scale, and \code{apply(post$corrG, c(1, 2), quantile, 0.05)} its
 #'   5\% quantile.
 #' @seealso \code{\link{size_shape}}, \code{\link{animal_draws}}
 #' @examples
@@ -184,9 +186,9 @@ print.size_shape <- function(x, ...) {
 #'            matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE))
 #' colnames(m) <- c(names_mat("G"), names_mat("E"))
 #' post <- back_transform(m, ss)
-#' dim(post$G)
-#' apply(post$G, c(2, 3), mean)   # posterior mean G on the trait scale
-#' apply(post$h2, 2, mean)
+#' dim(post$G)                    # traits x traits x draws
+#' apply(post$G, c(1, 2), mean)   # posterior mean G on the trait scale
+#' apply(post$h2, 1, mean)
 #' @export
 back_transform <- function(fit, transform) {
   if (!inherits(transform, "size_shape"))
@@ -235,7 +237,8 @@ back_transform <- function(fit, transform) {
 #' @export
 print.size_shape_draws <- function(x, ...) {
   components <- setdiff(names(x), "traits")
-  cat("<size_shape_draws>", dim(x[[components[1L]]])[1L], "draws,",
+  dims <- dim(x[[components[1L]]])
+  cat("<size_shape_draws>", dims[length(dims)], "draws,",
       length(x$traits), "traits\n")
   cat("components:", paste(components, collapse = ", "), "\n")
   if (length(x$traits) > 6L) {
@@ -246,33 +249,30 @@ print.size_shape_draws <- function(x, ...) {
   invisible(x)
 }
 
-# B M B' for every draw of a matrix-valued variable, indexed draw x trait x trait.
+# B M B' for every draw of a matrix-valued variable, as trait x trait x draw.
 .transform_draws <- function(draws, name, B, traits) {
   k_model <- ncol(B)
   parsed <- array(t(draws[, .matrix_variable_names(name, k_model), drop = FALSE]),
                   c(k_model, k_model, nrow(draws)))
   k <- nrow(B)
-  out <- apply(parsed, 3L, function(M) B %*% M %*% t(B))
-  out <- aperm(array(out, c(k, k, nrow(draws))), c(3, 1, 2))
-  dimnames(out) <- list(NULL, traits, traits)
+  out <- array(apply(parsed, 3L, function(M) B %*% M %*% t(B)), c(k, k, nrow(draws)))
+  dimnames(out) <- list(traits, traits, NULL)
   out
 }
 
-# cov2cor() of every draw of a draws x trait x trait array.
+# cov2cor() of every draw of a trait x trait x draw array.
 .corr_draws <- function(A) {
-  out <- apply(A, 1L, stats::cov2cor)
-  out <- aperm(array(out, dim(A)[c(2, 3, 1)]), c(3, 1, 2))
-  dimnames(out) <- dimnames(A)
+  out <- array(apply(A, 3L, stats::cov2cor), dim(A), dimnames = dimnames(A))
   out
 }
 
-# Diagonal of every draw, as a draws x trait matrix.
+# Diagonal of every draw, as a trait x draw matrix.
 .diag_draws <- function(A) {
-  n <- dim(A)[1]
-  k <- dim(A)[2]
-  index <- cbind(rep(seq_len(n), times = k), rep(seq_len(k), each = n),
-                 rep(seq_len(k), each = n))
-  matrix(A[index], n, k, dimnames = list(NULL, dimnames(A)[[2]]))
+  k <- dim(A)[1]
+  n <- dim(A)[3]
+  index <- cbind(rep(seq_len(k), times = n), rep(seq_len(k), times = n),
+                 rep(seq_len(n), each = k))
+  matrix(A[index], k, n, dimnames = list(dimnames(A)[[1]], NULL))
 }
 
 # Names of a matrix-valued Stan variable in column-major order, as cmdstanr

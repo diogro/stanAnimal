@@ -61,14 +61,14 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
 
   expect_s3_class(post, "size_shape_draws")
   expect_named(post, c("G", "E", "P", "corrG", "corrP", "h2", "traits"))
-  expect_equal(dim(post$G), c(3L, k, k))
-  expect_identical(dimnames(post$G), list(NULL, ss$raw_traits, ss$raw_traits))
-  expect_equal(unname(post$G[1, , ]), exp_G)
-  expect_equal(unname(post$E[1, , ]), exp_E)
-  expect_equal(unname(post$P[1, , ]), exp_P)
-  expect_equal(unname(post$corrG[1, , ]), unname(cov2cor(exp_G)))
-  expect_equal(unname(post$corrP[1, , ]), unname(cov2cor(exp_P)))
-  expect_equal(unname(post$h2[1, ]), unname(diag(exp_G) / diag(exp_P)))
+  expect_equal(dim(post$G), c(k, k, 3L))
+  expect_identical(dimnames(post$G), list(ss$raw_traits, ss$raw_traits, NULL))
+  expect_equal(unname(post$G[, , 1]), exp_G)
+  expect_equal(unname(post$E[, , 1]), exp_E)
+  expect_equal(unname(post$P[, , 1]), exp_P)
+  expect_equal(unname(post$corrG[, , 1]), unname(cov2cor(exp_G)))
+  expect_equal(unname(post$corrP[, , 1]), unname(cov2cor(exp_P)))
+  expect_equal(unname(post$h2[, 1]), unname(diag(exp_G) / diag(exp_P)))
   expect_output(print(post), "size_shape_draws")
 })
 
@@ -109,11 +109,11 @@ test_that("back_transform handles a phenotypic fit (P only)", {
   exp_P <- unname(B %*% P %*% t(B))
 
   expect_named(post, c("P", "corrP", "sigma_P", "traits"))
-  expect_equal(dim(post$P), c(2L, k, k))
-  expect_equal(dim(post$sigma_P), c(2L, k))
-  expect_equal(unname(post$P[1, , ]), exp_P)
-  expect_equal(unname(post$corrP[1, , ]), unname(cov2cor(exp_P)))
-  expect_equal(unname(post$sigma_P[1, ]), sqrt(diag(exp_P)))
+  expect_equal(dim(post$P), c(k, k, 2L))
+  expect_equal(dim(post$sigma_P), c(k, 2L))
+  expect_equal(unname(post$P[, , 1]), exp_P)
+  expect_equal(unname(post$corrP[, , 1]), unname(cov2cor(exp_P)))
+  expect_equal(unname(post$sigma_P[, 1]), sqrt(diag(exp_P)))
 })
 
 test_that("back_transform works with fewer shape axes than traits", {
@@ -125,9 +125,9 @@ test_that("back_transform works with fewer shape axes than traits", {
   colnames(m) <- names_mat("P", k_model)
 
   post <- back_transform(m, ss)
-  expect_equal(dim(post$P), c(2L, k, k))
-  expect_identical(dimnames(post$P), list(NULL, ss$raw_traits, ss$raw_traits))
-  expect_equal(unname(post$P[1, , ]), unname(ss$loadings %*% P %*% t(ss$loadings)))
+  expect_equal(dim(post$P), c(k, k, 2L))
+  expect_identical(dimnames(post$P), list(ss$raw_traits, ss$raw_traits, NULL))
+  expect_equal(unname(post$P[, , 1]), unname(ss$loadings %*% P %*% t(ss$loadings)))
 })
 
 test_that("back_transform validates its input", {
@@ -137,3 +137,4 @@ test_that("back_transform validates its input", {
   expect_error(back_transform(m, ss), "must contain G and E")
   expect_error(back_transform(matrix(0, 2, 2), ss), "named matrix")
 })
+
