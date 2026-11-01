@@ -59,15 +59,17 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
   exp_E <- unname(B %*% E %*% t(B))
   exp_P <- exp_G + exp_E
 
-  d <- as.matrix(post)
-  expect_equal(nrow(d), 3L)
-  expect_equal(matrix(d[1, names_mat("G", k)], k), exp_G)
-  expect_equal(matrix(d[1, names_mat("E", k)], k), exp_E)
-  expect_equal(matrix(d[1, names_mat("P", k)], k), exp_P)
-  expect_equal(as.vector(d[1, "corrG[1,2]"]), unname(cov2cor(exp_G)[1, 2]))
-  expect_equal(as.vector(d[1, "corrP[1,2]"]), unname(cov2cor(exp_P)[1, 2]))
-  expect_equal(as.vector(d[1, sprintf("h2[%d]", 1:k)]),
-               unname(diag(exp_G) / diag(exp_P)))
+  expect_s3_class(post, "size_shape_draws")
+  expect_named(post, c("G", "E", "P", "corrG", "corrP", "h2", "traits"))
+  expect_equal(dim(post$G), c(3L, k, k))
+  expect_identical(dimnames(post$G), list(NULL, ss$raw_traits, ss$raw_traits))
+  expect_equal(unname(post$G[1, , ]), exp_G)
+  expect_equal(unname(post$E[1, , ]), exp_E)
+  expect_equal(unname(post$P[1, , ]), exp_P)
+  expect_equal(unname(post$corrG[1, , ]), unname(cov2cor(exp_G)))
+  expect_equal(unname(post$corrP[1, , ]), unname(cov2cor(exp_P)))
+  expect_equal(unname(post$h2[1, ]), unname(diag(exp_G) / diag(exp_P)))
+  expect_output(print(post), "size_shape_draws")
 })
 
 test_that("pc_dominance detects a single gradient", {
@@ -105,16 +107,13 @@ test_that("back_transform handles a phenotypic fit (P only)", {
   post <- back_transform(m, ss)
   B <- ss$loadings
   exp_P <- unname(B %*% P %*% t(B))
-  triangle <- which(upper.tri(diag(k)), arr.ind = TRUE)
 
-  expect_equal(posterior::variables(post),
-               c(names_mat("P", k),
-                 sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
-                 sprintf("sigma_P[%d]", 1:k)))
-  d <- as.matrix(post)
-  expect_equal(matrix(d[1, names_mat("P", k)], k), exp_P)
-  expect_equal(as.vector(d[1, "corrP[1,2]"]), unname(cov2cor(exp_P)[1, 2]))
-  expect_equal(as.vector(d[1, sprintf("sigma_P[%d]", 1:k)]), sqrt(diag(exp_P)))
+  expect_named(post, c("P", "corrP", "sigma_P", "traits"))
+  expect_equal(dim(post$P), c(2L, k, k))
+  expect_equal(dim(post$sigma_P), c(2L, k))
+  expect_equal(unname(post$P[1, , ]), exp_P)
+  expect_equal(unname(post$corrP[1, , ]), unname(cov2cor(exp_P)))
+  expect_equal(unname(post$sigma_P[1, ]), sqrt(diag(exp_P)))
 })
 
 test_that("back_transform works with fewer shape axes than traits", {
@@ -126,9 +125,9 @@ test_that("back_transform works with fewer shape axes than traits", {
   colnames(m) <- names_mat("P", k_model)
 
   post <- back_transform(m, ss)
-  expect_equal(posterior::variables(post)[seq_len(k * k)], names_mat("P", k))
-  expect_equal(matrix(as.matrix(post)[1, names_mat("P", k)], k),
-               unname(ss$loadings %*% P %*% t(ss$loadings)))
+  expect_equal(dim(post$P), c(2L, k, k))
+  expect_identical(dimnames(post$P), list(NULL, ss$raw_traits, ss$raw_traits))
+  expect_equal(unname(post$P[1, , ]), unname(ss$loadings %*% P %*% t(ss$loadings)))
 })
 
 test_that("back_transform validates its input", {

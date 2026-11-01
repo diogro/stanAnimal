@@ -152,11 +152,13 @@ print.size_shape <- function(x, ...) {
 #'   of draws, containing the variables \code{G} and \code{E}, or \code{P} for a
 #'   phenotypic fit from \code{\link{lmm_multiCov}}.
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
-#' @return A \code{draws_matrix} on the scale of the original traits. For an
-#'   animal fit it holds \code{G[i,j]}, \code{E[i,j]}, \code{P[i,j]},
-#'   \code{corrG[i,j]} and \code{corrP[i,j]} (above the diagonal, \code{i < j})
-#'   and \code{h2[i]}; for a phenotypic fit it holds \code{P[i,j]},
-#'   \code{corrP[i,j]} (above the diagonal, \code{i < j}) and \code{sigma_P[i]}.
+#' @return A list of class \code{size_shape_draws} holding one element per
+#'   quantity, every array indexed by draw first and named after the original
+#'   traits. For an animal fit it holds \code{G}, \code{E}, \code{P},
+#'   \code{corrG} and \code{corrP} as \code{draws} by \code{traits} by
+#'   \code{traits} arrays, and \code{h2} as a \code{draws} by \code{traits}
+#'   matrix. For a phenotypic fit it holds \code{P} and \code{corrP} as arrays
+#'   and \code{sigma_P} as a matrix. \code{traits} holds the trait names.
 #' @details For each draw the covariance matrices are mapped as
 #'   \eqn{M \to B M B^T}, which is exact because size and shape are a linear
 #'   reparametrization of the traits. Heritabilities and correlations are then
@@ -166,6 +168,11 @@ print.size_shape <- function(x, ...) {
 #'
 #'   The fixed effects \code{beta} stay on the model scale, since a coefficient
 #'   for size or a shape axis does not correspond to a single original trait.
+#'
+#'   The draws come first, so posterior summaries are one \code{apply()} away:
+#'   \code{apply(post$G, c(2, 3), mean)} is the posterior mean of \code{G} on
+#'   the trait scale, and \code{apply(post$corrG, c(2, 3), quantile, 0.05)} its
+#'   5\% quantile.
 #' @seealso \code{\link{size_shape}}, \code{\link{animal_draws}}
 #' @examples
 #' ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
@@ -177,8 +184,9 @@ print.size_shape <- function(x, ...) {
 #'            matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE))
 #' colnames(m) <- c(names_mat("G"), names_mat("E"))
 #' post <- back_transform(m, ss)
-#' posterior::summarise_draws(
-#'   posterior::subset_draws(post, variable = c("h2[1]", "G[1,1]", "corrG[1,2]")))
+#' dim(post$G)
+#' apply(post$G, c(2, 3), mean)   # posterior mean G on the trait scale
+#' apply(post$h2, 2, mean)
 #' @export
 back_transform <- function(fit, transform) {
   if (!inherits(transform, "size_shape"))
@@ -208,38 +216,63 @@ back_transform <- function(fit, transform) {
          k_model, " model traits, as named by the model functions for the ",
          "size_shape scores.", call. = FALSE)
 
-  out_g <- .matrix_variable_names("G", k)
-  out_e <- .matrix_variable_names("E", k)
-  out_p <- .matrix_variable_names("P", k)
-  upper <- upper.tri(diag(k))
-  triangle <- which(upper, arr.ind = TRUE)
-
+  traits <- transform$raw_traits
   if (has_components) {
-    out <- matrix(NA_real_, nrow(m), k * k * 3L + 2L * nrow(triangle) + k,
-                  dimnames = list(NULL,
-                                  c(out_g, out_e, out_p,
-                                    sprintf("corrG[%d,%d]", triangle[, 1], triangle[, 2]),
-                                    sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
-                                    sprintf("h2[%d]", seq_len(k)))))
-    for (i in seq_len(nrow(m))) {
-      G <- B %*% matrix(m[i, in_g], k_model) %*% t(B)
-      E <- B %*% matrix(m[i, in_e], k_model) %*% t(B)
-      P <- G + E
-      out[i, ] <- c(G, E, P, stats::cov2cor(G)[upper], stats::cov2cor(P)[upper],
-                    diag(G) / diag(P))
-    }
+    components <- list(G = .transform_draws(m, "G", B, traits),
+                       E = .transform_draws(m, "E", B, traits))
+    components$P <- components$G + components$E
+    components$corrG <- .corr_draws(components$G)
+    components$corrP <- .corr_draws(components$P)
+    components$h2 <- .diag_draws(components$G) / .diag_draws(components$P)
   } else {
-    out <- matrix(NA_real_, nrow(m), k * k + nrow(triangle) + k,
-                  dimnames = list(NULL,
-                                  c(out_p,
-                                    sprintf("corrP[%d,%d]", triangle[, 1], triangle[, 2]),
-                                    sprintf("sigma_P[%d]", seq_len(k)))))
-    for (i in seq_len(nrow(m))) {
-      P <- B %*% matrix(m[i, in_p], k_model) %*% t(B)
-      out[i, ] <- c(P, stats::cov2cor(P)[upper], sqrt(diag(P)))
-    }
+    components <- list(P = .transform_draws(m, "P", B, traits))
+    components$corrP <- .corr_draws(components$P)
+    components$sigma_P <- sqrt(.diag_draws(components$P))
   }
-  posterior::as_draws_matrix(out)
+  structure(c(components, list(traits = traits)), class = "size_shape_draws")
+}
+
+#' @export
+print.size_shape_draws <- function(x, ...) {
+  components <- setdiff(names(x), "traits")
+  cat("<size_shape_draws>", dim(x[[components[1L]]])[1L], "draws,",
+      length(x$traits), "traits\n")
+  cat("components:", paste(components, collapse = ", "), "\n")
+  if (length(x$traits) > 6L) {
+    cat("traits:    ", paste(utils::head(x$traits, 6L), collapse = ", "), "...\n")
+  } else {
+    cat("traits:    ", paste(x$traits, collapse = ", "), "\n")
+  }
+  invisible(x)
+}
+
+# B M B' for every draw of a matrix-valued variable, indexed draw x trait x trait.
+.transform_draws <- function(draws, name, B, traits) {
+  k_model <- ncol(B)
+  parsed <- array(t(draws[, .matrix_variable_names(name, k_model), drop = FALSE]),
+                  c(k_model, k_model, nrow(draws)))
+  k <- nrow(B)
+  out <- apply(parsed, 3L, function(M) B %*% M %*% t(B))
+  out <- aperm(array(out, c(k, k, nrow(draws))), c(3, 1, 2))
+  dimnames(out) <- list(NULL, traits, traits)
+  out
+}
+
+# cov2cor() of every draw of a draws x trait x trait array.
+.corr_draws <- function(A) {
+  out <- apply(A, 1L, stats::cov2cor)
+  out <- aperm(array(out, dim(A)[c(2, 3, 1)]), c(3, 1, 2))
+  dimnames(out) <- dimnames(A)
+  out
+}
+
+# Diagonal of every draw, as a draws x trait matrix.
+.diag_draws <- function(A) {
+  n <- dim(A)[1]
+  k <- dim(A)[2]
+  index <- cbind(rep(seq_len(n), times = k), rep(seq_len(k), each = n),
+                 rep(seq_len(k), each = n))
+  matrix(A[index], n, k, dimnames = list(NULL, dimnames(A)[[2]]))
 }
 
 # Names of a matrix-valued Stan variable in column-major order, as cmdstanr
