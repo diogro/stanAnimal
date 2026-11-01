@@ -96,6 +96,10 @@ test_that("every example in the README runs", {
   blocks <- readme_code_blocks(path)
   expect_gt(length(blocks), 10L)
 
+  # snippets print plots, which would otherwise land in a stray Rplots.pdf
+  grDevices::pdf(file = tempfile(fileext = ".pdf"))
+  on.exit(grDevices::dev.off(), add = TRUE)
+
   env <- readme_context()
   for (block in blocks) {
     failure <- tryCatch({
