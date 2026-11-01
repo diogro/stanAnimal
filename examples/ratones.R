@@ -10,7 +10,8 @@
 #   Rscript examples/ratones.R
 
 # Install (if needed) and load all dependencies in one go
-pkgs <- c("rstan", "nadiv", "bayesplot", "posterior", "ggplot2", "patchwork")
+pkgs <- c("rstan", "nadiv", "bayesplot", "posterior", "ggplot2", "patchwork",
+          "evolqg")
 if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
 pak::pkg_install(pkgs, upgrade = FALSE)
 invisible(lapply(pkgs, library, character.only = TRUE))
@@ -54,8 +55,9 @@ dim(design$A)
 range(design$A)
 
 ## Model fit
-fit <- lmm_animal(design$Y, design$X, design$A, lkj_prior = 2,
-                  iter = 3000, warmup = 1500, chains = 4, cores = 4)
+time_traits <- system.time(
+  fit <- lmm_animal(design$Y, design$X, design$A, lkj_prior = 2,
+                    iter = 3000, warmup = 1500, chains = 4, cores = 4))
 
 # Heritability, genetic and residual standard deviations, and genetic
 # correlations, with sampler diagnostics
@@ -107,3 +109,44 @@ print(plot_corr(post_mean("corrG"), "Posterior mean corrG") +
         plot_corr(cor(dat[traits]), "Observed P correlations"))
 
 dev.off()
+
+## Extra: the same model in size and shape coordinates
+# Size plus the three shape axes span the same space as the four traits, so this
+# is the same model in another parametrisation: same number of traits, same X
+# and A. The prior is not invariant, though, and here that helps: the LKJ prior
+# acts on correlations between size and shape rather than between the raw
+# traits, and the shape axes are principal components, so their correlations are
+# expected to be small. lkj_prior stays at 2 to keep the two fits comparable;
+# for a size and shape fit on its own, a larger value is worth trying
+# (see ?size_shape).
+ss <- size_shape(dat[traits], n_shape = length(traits) - 1L)
+dat <- cbind(dat, ss$scores)
+design_ss <- animal_design(cbind(size, shape1, shape2, shape3) ~ SEX + AGE + LIN,
+                           dat, pedigree = ratones_pedigree)
+
+time_size_shape <- system.time(
+  fit_ss <- lmm_animal(design_ss$Y, design_ss$X, design_ss$A, lkj_prior = 2,
+                       iter = 3000, warmup = 1500, chains = 4, cores = 4))
+
+# Running time. Both fits use the same compiled model, so the sampling column is
+# the direct comparison; elapsed also covers R start-up and, on a cold cache,
+# compilation. A single run is noisy, so repeat it for a reliable comparison.
+rbind(traits = c(elapsed = time_traits[["elapsed"]],
+                 sampling = fit$time()$total),
+      size_shape = c(elapsed = time_size_shape[["elapsed"]],
+                     sampling = fit_ss$time()$total))
+
+# G on the measured trait scale, from both fits
+post_ss <- back_transform(fit_ss, ss)
+g_names <- sprintf("G[%d,%d]", rep(seq_along(traits), length(traits)),
+                   rep(seq_along(traits), each = length(traits)))
+G_traits <- post_mean("G")
+G_size_shape <- matrix(colMeans(as.matrix(post_ss)[, g_names]), length(traits),
+                       dimnames = list(traits, traits))
+round(G_traits, 4)
+round(G_size_shape, 4)
+# Largest difference between the two estimates, relative to the largest element
+# of G: Monte Carlo error, plus the prior difference described above
+round(max(abs(G_traits - G_size_shape)) / max(abs(G_traits)), 3)
+
+evolqg::MatrixCompare(G_traits, G_size_shape)
