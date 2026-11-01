@@ -177,6 +177,8 @@ apply(post$h2, 1, mean)                       # posterior mean h2 per trait
 
 `animal_design()` warns automatically when the response has three or more traits and its first principal component explains 80% or more of the variance.
 
+The LKJ prior is not invariant under this change of traits: it acts on correlations between size and shape, which are expected to be small because the shape axes are principal components, so a larger `lkj_prior` than for the same traits fitted raw is often reasonable — see `?size_shape`.
+
 Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale. `back_transform()` also accepts a `lmm_multiCov()` fit, in which case it returns `P`, `corrP` and `sigma_P`.
 
 ## Phenotypic covariance only (P)
