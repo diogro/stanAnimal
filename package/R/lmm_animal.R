@@ -37,7 +37,7 @@
 #' @param chains number of chains to run.
 #' @param cores number of chains to run in parallel (cmdstanr only).
 #' @param model_file Optional path to a custom Stan file replacing the default model.
-#' @param control list of stan control arguments.
+#' @param control Named list of sampler controls, passed to whichever engine runs: \code{adapt_delta}, \code{adapt_engaged}, \code{max_treedepth}, \code{step_size} (rstan's \code{stepsize} is accepted), \code{init_buffer}, \code{term_buffer}, \code{window} and \code{metric}. Any other name is an error, so a control is never silently ignored.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
 #' @param residual_structure Residual covariance for multivariate fits: "unstructured" (default, full covariance between traits) or "diagonal". With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance and inflate heritability, so "unstructured" is recommended when estimating G.
@@ -332,6 +332,7 @@ animal_draws <- function(fit, variables = NULL, ...) {
   # init = 0 starts at the prior mode (identity correlations, unit scales),
   # avoiding degenerate cholesky_factor_corr draws that can abort a chain at
   # high trait counts. Overridden by an explicit `init` in `...`.
+  control <- .rstan_control(.check_control(control))
   args <- list(object = model, data = stan_data, iter = iter, warmup = warmup,
                chains = chains, control = control, init = 0)
   do.call(rstan::sampling, utils::modifyList(args, list(...)))

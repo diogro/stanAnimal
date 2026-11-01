@@ -23,3 +23,26 @@ test_that("cstan passes adapt_delta and max_treedepth from control", {
   expect_equal(fit$metadata()$adapt_delta, 0.8)
   expect_equal(fit$metadata()$max_treedepth, 5)
 })
+
+test_that("cstan forwards the other sampler controls", {
+  skip_if_no_cmdstan()
+  code <- "parameters { real x; } model { x ~ normal(0, 1); }"
+  fit <- stanAnimal:::cstan(code, chains = 1, iter = 200, refresh = 0,
+                            show_messages = FALSE,
+                            control = list(adapt_engaged = FALSE, step_size = 0.3))
+  stepsize <- as.matrix(fit$sampler_diagnostics(format = "draws_matrix"))[, "stepsize__"]
+  expect_equal(as.numeric(unique(stepsize)), 0.3)
+  expect_error(stanAnimal:::cstan(code, iter = 100, control = list(gamma = 0.5)),
+               "unsupported sampler controls: gamma")
+})
+
+test_that("control is validated once, for both engines", {
+  expect_equal(stanAnimal:::.check_control(NULL), list())
+  expect_error(stanAnimal:::.check_control(list(gamma = 1)), "gamma")
+  expect_error(stanAnimal:::.check_control(list(1, 2)), "named list")
+  expect_named(stanAnimal:::.rstan_control(list(step_size = 0.3, adapt_delta = 0.9)),
+               c("stepsize", "adapt_delta"))
+  expect_named(stanAnimal:::.check_control(list(stepsize = 0.3)), "step_size")
+  expect_error(stanAnimal:::.check_control(list(step_size = 0.3, stepsize = 0.4)),
+               "more than once")
+})

@@ -1,6 +1,36 @@
 # Helpers for fitting Stan models with cmdstanr.
 # Adapted from rethinking (https://github.com/rmcelreath/rethinking).
 
+# Sampler controls the package forwards to either engine. Names follow cmdstanr;
+# rstan spells step_size "stepsize". Anything else is an error, so that a
+# control accepted by one engine is never silently dropped by the other.
+.stan_controls <- c("adapt_delta", "adapt_engaged", "max_treedepth", "step_size",
+                    "init_buffer", "term_buffer", "window", "metric")
+
+.check_control <- function(control) {
+  if (is.null(control)) return(list())
+  if (!is.list(control) || (length(control) && is.null(names(control))))
+    stop("control must be a named list of sampler controls.", call. = FALSE)
+  # rstan calls step_size "stepsize"; accept it and settle on a single name.
+  names(control)[names(control) == "stepsize"] <- "step_size"
+  dup <- unique(names(control)[duplicated(names(control))])
+  if (length(dup))
+    stop("control sets ", paste(dup, collapse = ", "), " more than once.",
+         call. = FALSE)
+  unknown <- setdiff(names(control), .stan_controls)
+  if (length(unknown))
+    stop("unsupported sampler controls: ", paste(unknown, collapse = ", "),
+         ". Supported: ", paste(.stan_controls, collapse = ", "), ".",
+         call. = FALSE)
+  control
+}
+
+# The same controls in the spelling rstan uses.
+.rstan_control <- function(control) {
+  names(control)[names(control) == "step_size"] <- "stepsize"
+  control
+}
+
 # Fit a model from Stan code using cmdstanr and return the CmdStanMCMC object.
 # The result works directly with posterior (fit$draws()) and bayesplot
 # (e.g. bayesplot::mcmc_trace(fit$draws("beta")), bayesplot::nuts_params(fit)).
@@ -14,20 +44,18 @@ cstan <- function(model_code, data = list(), chains = 1, cores = 1, iter = 1000,
   stan_file <- cmdstanr::write_stan_file(model_code, dir = stan_cache_dir())
   mod <- cmdstanr::cmdstan_model(stan_file, cpp_options = cpp_options)
 
-  adapt_delta <- if (is.null(control[["adapt_delta"]])) 0.95 else
-    as.numeric(control[["adapt_delta"]])
-  max_treedepth <- if (is.null(control[["max_treedepth"]])) 11 else
-    as.numeric(control[["max_treedepth"]])
+  control <- .check_control(control)
 
   args <- list(data = data,
                chains = chains,
                parallel_chains = cores,
                iter_warmup = warmup,
                iter_sampling = iter - warmup,
-               adapt_delta = adapt_delta,
-               max_treedepth = max_treedepth,
+               adapt_delta = 0.95,
+               max_treedepth = 11,
                init = 0)
   if (threads > 1) args$threads_per_chain <- threads
+  args <- utils::modifyList(args, control)
   args <- utils::modifyList(args, list(...))
   do.call(mod$sample, args)
 }

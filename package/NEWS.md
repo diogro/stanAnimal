@@ -42,6 +42,12 @@
 
 ## Bug fixes
 
+* The `control` list now reaches both engines. With `cmdstanr`, only
+  `adapt_delta` and `max_treedepth` were forwarded and every other entry was
+  silently dropped; all documented sampler controls are now passed on, with
+  `step_size` translated to `rstan`'s `stepsize`. Names that neither engine
+  supports are an error instead of being ignored.
+
 * The mean of the response is now restored for any design whose columns can
   represent a constant, not only when there is a literal intercept column. A
   formula such as `y ~ 0 + factor(g)` used to return coefficients on the
@@ -66,6 +72,7 @@
 ## Testing
 
 * New tests cover the bundled datasets, the `X` option of `plot_G_ellipses()`
-  and `to_draws_list()`.
+  and `to_draws_list()`, the sampler `control` pass-through of both engines, and
+  the choice between `cmdstanr` and `rstan`.
 * The code blocks of the README are now evaluated as a test, so documentation
   cannot drift from the API unnoticed (skipped outside a checkout and on CRAN).
