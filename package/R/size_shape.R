@@ -67,12 +67,24 @@ pc_dominance <- function(Y) {
 #'   geometric mean for log measurements. Shape is \code{Y - size}, which sums
 #'   to zero within each individual and therefore lives in an
 #'   \code{ncol(Y) - 1} dimensional subspace; its principal components are the
-#'   shape axes. The leading axis of variation is size, and the shape axes are
-#'   ordered by the variance they explain.
+#'   shape axes. Size is often close to the leading axis of variation of a
+#'   morphometric data set, but it need not be: it is the unweighted mean of the
+#'   traits, while the principal components are shaped by their covariance
+#'   structure. The shape axes are ordered by the residual variance they
+#'   explain.
 #'
 #'   The transformation is linear, so genetic and residual covariance matrices
 #'   transform as \eqn{B M B^T}; use \code{\link{back_transform}} to do this for
 #'   the draws of a fit. Signs of the shape axes are arbitrary.
+#'
+#'   The prior is not invariant under this change of traits, and that is usually
+#'   an asset. The LKJ prior that \code{\link{lmm_animal}} puts on the
+#'   correlation matrix acts on correlations between size and shape instead of
+#'   correlations between raw traits. The shape axes are principal components of
+#'   \code{Y - size}, so they are uncorrelated in the sample and their genetic
+#'   correlations are expected to be small; a larger \code{lkj_prior} than for
+#'   the same traits fitted raw (stronger shrinkage towards zero correlation) is
+#'   therefore reasonable, and it can also make the model cheaper to sample.
 #' @seealso \code{\link{back_transform}}, \code{\link{animal_design}}
 #' @examples
 #' size_gradient <- rnorm(20)
