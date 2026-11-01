@@ -11,8 +11,6 @@ LazyData: true
 Depends: 
     R (>= 4.0.0)
 Imports: 
-    rstan (>= 2.18.1),
-    cmdstanr,
     ggplot2,
     grid,
     posterior,
@@ -20,7 +18,9 @@ Imports:
     tools,
     utils
 Suggests:
+    cmdstanr,
     nadiv,
+    rstan (>= 2.18.1),
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/testthat/parallel: true

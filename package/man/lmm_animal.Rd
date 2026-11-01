@@ -48,7 +48,7 @@ lmm_animal(
 
 \item{control}{list of stan control arguments.}
 
-\item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan.}
+\item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.}
 
 \item{blend_A}{If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.}
 

@@ -12,7 +12,7 @@
 #' @param chains number of chains to run.
 #' @param cores number of chains to run in parallel (cmdstanr only).
 #' @param control list of stan control arguments.
-#' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
+#' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
 #' @param model_file Optional path to a custom Stan file replacing the default model.
 #' @param ... additional parameters for stan sampling.
 #' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{animal_draws}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
@@ -30,10 +30,7 @@ lmm_multiCov = function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2)
   Y <- YX$Y
   X <- YX$X
 
-  if(cmd_stan && !requireNamespace("cmdstanr", quietly = TRUE)){
-    warning("cmdstanr not installed, falling back to rstan.\nInstall cmdstanr using remotes::install_github(\"stan-dev/cmdstanr)\".\nNext, run cmdstanr::install_cmdstan().")
-    cmd_stan = FALSE
-  }
+  cmd_stan <- .resolve_stan_backend(cmd_stan)
 
   stan_data = list(K = ncol(Y),
                    J = ncol(X),

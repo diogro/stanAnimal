@@ -19,6 +19,12 @@
 
 ## Changes
 
+* `cmdstanr` and `rstan` are suggested rather than imported, so the package
+  installs without a Stan engine. A fit uses `cmdstanr` when it is available,
+  falls back to `rstan` with a warning when it is not, and stops with the
+  installation command when neither is present. The fallback warning used to
+  suggest a malformed `install_github()` call.
+
 * The package no longer needs `nadiv`, which was only used to build `A` from a
   pedigree: `makeA()` replaces it, so nothing has to be installed for the
   pedigree path and it works on the same R versions as the rest of the package.

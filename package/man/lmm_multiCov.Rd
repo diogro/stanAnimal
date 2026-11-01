@@ -35,7 +35,7 @@ lmm_multiCov(
 
 \item{control}{list of stan control arguments.}
 
-\item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan.}
+\item{cmd_stan}{Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.}
 
 \item{model_file}{Optional path to a custom Stan file replacing the default model.}
 

@@ -230,7 +230,7 @@ Models fit with cmdstanr are compiled once and the executable is reused in later
 
 ## Other options
 
-- `cmd_stan = FALSE` uses `rstan` instead of `cmdstanr`.
+- `cmd_stan = FALSE` uses `rstan` instead of `cmdstanr`. Both engines are optional: without `cmdstanr` a fit falls back to `rstan` with a warning, and with neither installed it stops and says how to install one.
 - `blend_A = TRUE` replaces `A` with `0.99 * A + 0.01 * I`.
 - `model_file` runs a custom Stan file in place of the default model.
 - Further arguments (`...`) are passed to the sampler, for example `refresh = 0`.

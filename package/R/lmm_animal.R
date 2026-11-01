@@ -1,3 +1,28 @@
+# Wrapped so that the tests can pretend a package is not installed.
+.is_installed <- function(package) requireNamespace(package, quietly = TRUE)
+
+# Which Stan engine to use. Both cmdstanr and rstan are suggested packages, so
+# a fit falls back to rstan when cmdstanr is not installed, and errors with the
+# installation instructions when neither is available.
+.resolve_stan_backend <- function(cmd_stan) {
+  if (cmd_stan) {
+    if (.is_installed("cmdstanr")) return(TRUE)
+    if (!.is_installed("rstan"))
+      stop("fitting a model needs cmdstanr or rstan: install one of them with ",
+           "remotes::install_github(\"stan-dev/cmdstanr\") (then ",
+           "cmdstanr::install_cmdstan()) or install.packages(\"rstan\").",
+           call. = FALSE)
+    warning("cmdstanr is not installed, falling back to rstan. Install it with ",
+            "remotes::install_github(\"stan-dev/cmdstanr\"), then run ",
+            "cmdstanr::install_cmdstan().", call. = FALSE)
+    return(FALSE)
+  }
+  if (!.is_installed("rstan"))
+    stop("cmd_stan = FALSE needs rstan: install.packages(\"rstan\").",
+         call. = FALSE)
+  FALSE
+}
+
 #' Fit linear mixed animal model
 #' 
 #' Fits a univariate or multivariate linear mixed animal model using a known relatedness matrix
@@ -13,7 +38,7 @@
 #' @param cores number of chains to run in parallel (cmdstanr only).
 #' @param model_file Optional path to a custom Stan file replacing the default model.
 #' @param control list of stan control arguments.
-#' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan.
+#' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
 #' @param residual_structure Residual covariance for multivariate fits: "unstructured" (default, full covariance between traits) or "diagonal". With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance and inflate heritability, so "unstructured" is recommended when estimating G.
 #' @param ... additional parameters for stan sampling
@@ -63,11 +88,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
   if (min(eigenvalues) <= eigen_tol)
     stop("A must be positive definite for Stan; set blend_A = TRUE to regularize it.")
 
-  if(cmd_stan)
-    if(!requireNamespace("cmdstanr", quietly = TRUE)){
-      warning("cmdstanr not installed, falling back to rstan.\nInstall cmdstanr using remotes::install_github(\"stan-dev/cmdstanr)\".\nNext, run cmdstanr::install_cmdstan().")
-      cmd_stan = FALSE
-    }
+  cmd_stan <- .resolve_stan_backend(cmd_stan)
       
   if(ncol(Y) == 1L){
     stan_data = list(J = ncol(X),
