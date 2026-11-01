@@ -15,7 +15,8 @@ Rscript examples/univariate.R
 | `phenotypic_covariance.R` | `lm_phen_cov()` with no pedigree, plus `size_shape()` and `back_transform()`, on the same mouse data |
 | `gibbs.R` | `lmm_animal_gibbs()`, the single-chain Gibbs sampler; its inverse-Wishart priors differ from `lmm_animal()` |
 | `multivariate_power_simulation.R` | Parallel simulation study of genetic-correlation recovery across sample sizes, writing summaries to `results/` |
-| `package_comparison.R` | The same bivariate animal model fitted with `stanimal`, `MCMCglmm`, `sommer` and ASReml-R, estimated `G` and `E` compared with the simulated truth |
+| `package_comparison.R` | The same bivariate animal model fitted with `stanimal`, `MCMCglmm`, `BGLR`, `sommer`, `lme4breeding` and ASReml-R, estimated `G` and `E` compared with the simulated truth |
+| `trait_comparison.R` | The same comparison for a user-chosen number of traits (first argument, default 5), reporting MSE of `G`, `E`, `h2` and `corrG` plus timings |
 
 In the interval plots (`bayesplot::mcmc_recover_intervals()`), the filled circle
 is the posterior mean, the thick and thin segments are the 80% and 99% credible
@@ -25,5 +26,6 @@ matched to the draws by name, not by position.
 All scripts need `stanimal` installed and CmdStan available
 (`cmdstanr::install_cmdstan()`), except `gibbs.R`, which needs neither. The
 mouse data used by `ratones.R` and `phenotypic_covariance.R` ships with the
-package, so nothing is downloaded. `package_comparison.R` also needs
-`MCMCglmm`, `sommer` and a licensed ASReml-R.
+package, so nothing is downloaded. The two comparison scripts install
+`MCMCglmm`, `BGLR`, `sommer` and `lme4breeding` if they are missing, and check
+for a licensed ASReml-R without trying to install it.
