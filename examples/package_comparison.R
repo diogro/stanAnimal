@@ -3,7 +3,7 @@
 # Simulates two genetically correlated traits with a known G and E on a
 # five-generation pedigree, then fits the same bivariate animal model with
 # stanimal, MCMCglmm, sommer and ASReml-R, and compares the estimates with the
-# simulated truth. Run from the project root:
+# simulated truth and the time each fit took. Run from the project root:
 #   Rscript examples/package_comparison.R
 #
 # stanimal and MCMCglmm sample the posterior; sommer and ASReml-R maximize the
@@ -42,15 +42,16 @@ dat <- data.frame(id = factor(ped$id), sex = X[, "sex"], age = X[, "age"], Y)
 
 ## Comparison helpers --------------------------------------------------------
 
-# One row per engine: the three distinct entries of G and of E, heritabilities
-# and the genetic correlation.
-compare <- function(engine, G_hat, E_hat) {
+# One row per engine: the three distinct entries of G and of E, heritabilities,
+# the genetic correlation and the time the fit took in seconds.
+compare <- function(engine, G_hat, E_hat, elapsed = NA_real_) {
   data.frame(engine = engine,
              G11 = G_hat[1, 1], G12 = G_hat[1, 2], G22 = G_hat[2, 2],
              E11 = E_hat[1, 1], E12 = E_hat[1, 2], E22 = E_hat[2, 2],
              h2_1 = G_hat[1, 1] / (G_hat[1, 1] + E_hat[1, 1]),
              h2_2 = G_hat[2, 2] / (G_hat[2, 2] + E_hat[2, 2]),
-             rG = cov2cor(G_hat)[1, 2])
+             rG = cov2cor(G_hat)[1, 2],
+             time_s = elapsed)
 }
 
 # lower triangle, column order -> symmetric matrix
@@ -66,41 +67,47 @@ results <- list(compare("truth", G, E))
 ## stanimal: Bayesian, breeding values marginalized out of the likelihood ----
 
 design <- animal_design(cbind(t1, t2) ~ sex + age, dat, pedigree = ped)
-fit_stan <- lmm_animal(design$Y, design$X, design$A,
-                       iter = 2000, warmup = 1000, chains = 4, cores = 4,
-                       refresh = 0)
+time_stan <- system.time(
+  fit_stan <- lmm_animal(design$Y, design$X, design$A,
+                         iter = 2000, warmup = 1000, chains = 4, cores = 4,
+                         refresh = 0))
 
 # G[i,j] and E[i,j] draws, summarised as trait by trait posterior means
 results$stanimal <- compare("stanimal", draws_mean(fit_stan, "G"),
-                            draws_mean(fit_stan, "E"))
+                            draws_mean(fit_stan, "E"),
+                            elapsed = time_stan[["elapsed"]])
 
 ## MCMCglmm: Bayesian, pedigree supplied as the inverse of A ----------------
 
 library(MCMCglmm)
 prior <- list(G = list(G = list(V = diag(2) * 0.5, nu = 2)),
               R = list(R = list(V = diag(2) * 0.5, nu = 2)))
-fit_mcmc <- MCMCglmm(cbind(t1, t2) ~ trait + trait:sex + trait:age - 1,
-                     random   = ~ us(trait):id,
-                     rcov     = ~ us(trait):units,
-                     ginverse = list(id = MCMCglmm::inverseA(ped)$Ainv),
-                     family   = c("gaussian", "gaussian"),
-                     prior = prior, data = dat,
-                     nitt = 13000, burnin = 3000, thin = 10, verbose = FALSE)
+time_mcmc <- system.time(
+  fit_mcmc <- MCMCglmm(cbind(t1, t2) ~ trait + trait:sex + trait:age - 1,
+                       random   = ~ us(trait):id,
+                       rcov     = ~ us(trait):units,
+                       ginverse = list(id = MCMCglmm::inverseA(ped)$Ainv),
+                       family   = c("gaussian", "gaussian"),
+                       prior = prior, data = dat,
+                       nitt = 13000, burnin = 3000, thin = 10, verbose = FALSE))
 # VCV columns are G[t1,t1], G[t2,t1], G[t1,t2], G[t2,t2], then the same for units
 results$MCMCglmm <- compare("MCMCglmm",
                             matrix(colMeans(fit_mcmc$VCV[, 1:4]), 2),
-                            matrix(colMeans(fit_mcmc$VCV[, 5:8]), 2))
+                            matrix(colMeans(fit_mcmc$VCV[, 5:8]), 2),
+                            elapsed = time_mcmc[["elapsed"]])
 
 ## sommer: REML, relationship matrix passed directly to vsr() ----------------
 
 library(sommer)
 # mmer() still works; sommer >= 4.5 also points to mmes() with the same syntax
-fit_sommer <- mmer(cbind(t1, t2) ~ sex + age,
-                   random = ~ vsr(id, Gu = A),
-                   rcov   = ~ vsr(units, Gtc = unsm(2)),
-                   data = dat, verbose = FALSE)
+time_sommer <- system.time(
+  fit_sommer <- mmer(cbind(t1, t2) ~ sex + age,
+                     random = ~ vsr(id, Gu = A),
+                     rcov   = ~ vsr(units, Gtc = unsm(2)),
+                     data = dat, verbose = FALSE))
 results$sommer <- compare("sommer", fit_sommer$sigma$`u:id`,
-                          fit_sommer$sigma$`u:units`)
+                          fit_sommer$sigma$`u:units`,
+                          elapsed = time_sommer[["elapsed"]])
 
 ## ASReml-R: REML, inverse of A passed through vm() --------------------------
 
@@ -111,19 +118,35 @@ ainv <- try(asreml::ainverse(ped0), silent = TRUE)  # ASReml's sparse inverse of
 if (inherits(ainv, "try-error")) {
   message("asreml::ainverse() failed to form A^-1, skipping the ASReml-R fit")
 } else {
-  fit_asr <- asreml(fixed  = cbind(t1, t2) ~ trait + trait:sex + trait:age,
-                    random = ~ vm(id, ainv):us(trait, init = c(1, 0.2, 1)),
-                    rcov   = ~ units:us(trait, init = c(1, 0.2, 1)),
-                    data = dat)
-  fit_asr <- update(fit_asr)                        # bivariate fits need one pass
+  # Time both passes: bivariate ASReml-R fits are estimated in two steps
+  time_asr <- system.time({
+    fit_asr <- asreml(fixed  = cbind(t1, t2) ~ trait + trait:sex + trait:age,
+                      random = ~ vm(id, ainv):us(trait, init = c(1, 0.2, 1)),
+                      rcov   = ~ units:us(trait, init = c(1, 0.2, 1)),
+                      data = dat)
+    fit_asr <- update(fit_asr)
+  })
   vc <- summary(fit_asr)$varcomp
   results$asreml <- compare("asreml",
                             lower2mat(vc[grep("^vm\\(", rownames(vc)), 1]),
-                            lower2mat(vc[grep("^units.*trait!trait", rownames(vc)), 1]))
+                            lower2mat(vc[grep("^units.*trait!trait", rownames(vc)), 1]),
+                            elapsed = time_asr[["elapsed"]])
 }
 
 ## The comparison -----------------------------------------------------------
 
 results <- do.call(rbind, results)
 rownames(results) <- results$engine
-print(round(results[, -1], 3))
+out <- round(results[, -1], 3)
+out[, "time_s"] <- round(results$time_s, 1)
+print(out)
+
+# Timings are a single run each, in seconds, and cover the fit call only.
+# Setup outside the call is not timed: animal_design() builds A for stanimal and
+# ainverse() is run before the ASReml-R fit, while the inverse of A that
+# MCMCglmm needs is evaluated inside its call and so is included. stanimal's
+# time also includes compiling the model when the cache is cold; after the first
+# fit the compiled executable is reused and only sampling is timed. These are
+# not like-for-like posteriors either: MCMCglmm and stanimal sample and stop at
+# different effective sample sizes, while sommer and ASReml-R maximize the REML
+# likelihood.
