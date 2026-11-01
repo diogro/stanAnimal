@@ -13,9 +13,12 @@ pak::pkg_install("stan-dev/cmdstanr")
 cmdstanr::install_cmdstan()
 install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 pak::pkg_install("diogro/stanAnimal/package")
+
+# only needed to build A from a pedigree (see below); it needs R 4.2.0
+install.packages("nadiv")
 ```
 
-Requires R 4.0.0 or later. Building `A` from a pedigree (below) also needs `nadiv`, which is not installed automatically.
+Requires R 4.0.0 or later. `nadiv` is a suggested dependency rather than an imported one: it is only used by `animal_design()` when it builds `A` from a pedigree, it compiles, and it requires a newer R than the package itself, so it is installed separately.
 
 # Example data
 
