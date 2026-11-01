@@ -68,3 +68,34 @@ test_that("makeA validates the pedigree", {
   no_id <- data.frame(id = c(1, NA), sire = c(0, 0), dam = c(0, 0))
   expect_error(makeA(no_id), "missing ID")
 })
+
+# nadiv is not needed to use the package: it is suggested only so that
+# makeA() can be checked against an independent implementation.
+test_that("makeA matches nadiv::makeA", {
+  skip_if_not_installed("nadiv")
+  compare <- function(pedigree) {
+    reference <- as.matrix(suppressWarnings(nadiv::makeA(nadiv::prepPed(pedigree))))
+    got <- suppressWarnings(makeA(pedigree))
+    expect_equal(got, reference[rownames(got), colnames(got)], tolerance = 1e-12)
+  }
+
+  compare(ped6)                                             # the test pedigree
+  compare(ped6[c(5, 1, 6, 3, 2, 4), ])                      # unordered
+  compare(data.frame(id = 1:6, sire = c(NA, NA, NA, 1, 1, 4),  # full-sib mating
+                     dam = c(NA, NA, NA, 2, 2, 5)))
+  compare(data.frame(id = 3:1, sire = c(NA, 3, NA),            # parent added as founder
+                     dam = c(NA, NA, NA)))
+  compare(data.frame(id = letters[1:4], sire = c(NA, NA, "a", "c"),
+                     dam = c(NA, NA, "b", "b")))
+  compare(ratones_pedigree)                                 # 525 individuals
+
+  set.seed(4)
+  n <- 200
+  founders <- 20
+  random <- data.frame(id = seq_len(n),
+                       sire = c(rep(NA, founders),
+                                sample.int(founders, n - founders, TRUE)),
+                       dam = c(rep(NA, founders),
+                               sample.int(founders, n - founders, TRUE)))
+  compare(random)
+})

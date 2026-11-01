@@ -19,10 +19,10 @@
 
 ## Changes
 
-* The package no longer depends on `nadiv`, which was only used to build `A`
-  from a pedigree: `makeA()` replaces it, so the pedigree path no longer needs a
-  compiled suggested package, and it works on the same R versions as the rest of
-  the package.
+* The package no longer needs `nadiv`, which was only used to build `A` from a
+  pedigree: `makeA()` replaces it, so nothing has to be installed for the
+  pedigree path and it works on the same R versions as the rest of the package.
+  `nadiv` stays in Suggests for one test, which checks `makeA()` against it.
 * `back_transform()` now returns a list of class `size_shape_draws` instead of a
   single `draws_matrix`: `G`, `E`, `P`, `corrG` and `corrP` are
   trait by trait by draw arrays and `h2` is a trait by draw matrix, the same
