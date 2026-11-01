@@ -1,4 +1,4 @@
-# stanAnimal 0.4.0
+# stanAnimal 0.5.0 (release candidate)
 
 ## API naming
 

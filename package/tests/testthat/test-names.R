@@ -1,4 +1,4 @@
-# Renames in 0.4.0 replaced the old exports rather than deprecating them, so a
+# Renames in 0.5.0 replaced the old exports rather than deprecating them, so a
 # script written against an older version fails at the call. This keeps the old
 # names from creeping back as aliases.
 
