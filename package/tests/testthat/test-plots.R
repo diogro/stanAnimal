@@ -80,8 +80,10 @@ test_that("plot_G_ellipses plots residuals when X is given", {
 
   p <- plot_G_ellipses(d, Y, X = X)
   built <- ggplot2::ggplot_build(p)$data
-  points <- built[[which(vapply(built, function(layer)
-    all(layer$geom == "point"), logical(1)))]]
+  # built layers keep the order of p$layers, and only GeomPoint carries the data
+  point_layer <- which(vapply(p$layers, function(layer)
+    inherits(layer$geom, "GeomPoint"), logical(1)))[[1]]
+  points <- built[[point_layer]]
   expected <- Y - X %*% t(B)
   expect_equal(sort(points$x), sort(expected[, 1]))
   expect_equal(sort(points$y), sort(expected[, 2]))

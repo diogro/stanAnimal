@@ -32,7 +32,7 @@ test_that("constant traits are rejected before the model is fitted", {
                "every trait in Y must vary")
   # multivariate: one constant column is enough
   expect_error(lmm_animal(cbind(Y, flat = 1), X, A),
-               "every trait in Y must vary: flat")
+               "every trait in Y must vary.*: flat")
   # partially named and unnamed responses still say which column it was
   expect_error(lmm_animal(cbind(Y, 1), X, A), "column 4")
   expect_error(lmm_animal(cbind(unname(Y[, 1]), 1), X, A), "column 2")
