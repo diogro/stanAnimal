@@ -10,8 +10,10 @@ random_covariance(
   variances = NULL,
   min_var = 1,
   max_var = 1,
-  method = c("lkj", "partial"),
+  method = c("lkj", "partial", "factor"),
   lkj_prior = 2,
+  loadings = NULL,
+  integration = NULL,
   trait_names = NULL
 )
 }
@@ -31,10 +33,25 @@ and \code{max_var}.}
 \item{method}{Correlation model. \code{"lkj"} (default) draws a correlation
 matrix from the LKJ distribution with shape \code{lkj_prior};
 \code{"partial"} draws partial correlations uniformly, reproducing
-\code{evolqg::RandomMatrix()}.}
+\code{evolqg::RandomMatrix()}; \code{"factor"} builds a one-factor
+correlation matrix whose first principal component is a size axis.}
 
 \item{lkj_prior}{LKJ shape for \code{method = "lkj"}, a finite number above
 0. The default \code{2} matches the prior of \code{\link{lmm_animal}}.}
+
+\item{loadings}{For \code{method = "factor"}, the positive loadings of the
+size axis, one per trait. The default gives every trait the same loading,
+so PC1 is size in the sense of the mean of the standardized traits. The
+same loadings are used for every matrix, so only the strength of the
+factor changes between draws.}
+
+\item{integration}{For \code{method = "factor"}, the target integration
+level, measured as the relative eigenvalue variance of
+\code{evolqg::CalcEigenVar(rel = TRUE)} and so between 0 and 1. A single
+number targets that level for every matrix; two numbers draw the target
+uniformly between them. The default \code{NULL} draws from 0.1 to 0.8,
+spanning weak to strong integration. Supplying it with another method is
+an error.}
 
 \item{trait_names}{Optional trait names, one per trait; the default is
 \code{trait1}, \code{trait2}, ...}
@@ -45,9 +62,10 @@ With \code{n_matrices = 1}, a named symmetric positive-definite
 }
 \description{
 Draws random covariance matrices for simulations: a random correlation
-matrix scaled by a vector of variances. Correlations come either from the
-LKJ distribution used as a prior by \code{\link{lmm_animal}}, or from the
-partial-correlation construction of \code{evolqg::RandomMatrix()}.
+matrix scaled by a vector of variances. Correlations come from the LKJ
+distribution used as a prior by \code{\link{lmm_animal}}, from the
+partial-correlation construction of \code{evolqg::RandomMatrix()}, or from a
+one-factor model whose first principal component is a positive size axis.
 }
 \details{
 The variances are independent of the correlations, and the
@@ -62,13 +80,31 @@ The variances are independent of the correlations, and the
   models and stays well conditioned: correlations are shrunk toward zero by
   \code{lkj_prior}, and a five-trait matrix typically has a condition number
   in the tens. The partial-correlation method reproduces
-  \code{evolqg::RandomMatrix()}, but it samples correlations near \eqn{\pm
-  1} and frequently produces nearly singular matrices: at five traits the
-  median condition number is in the hundreds. Use it to reproduce that
-  construction, not as a neutral simulation default.
+  \code{evolqg::RandomMatrix()} and is the one to use when the simulation
+  should span a realistic range of integration: at five traits its first
+  principal component can explain up to about 90\% of the variance and the
+  mean squared correlation can approach 0.8, while LKJ(2) stays well below
+  that. The cost is conditioning: the strongly integrated draws often have
+  condition numbers in the hundreds or more, whereas real size-dominated
+  matrices have a single positive axis and can reach the same integration
+  with much smaller condition numbers. Use the partial method to span the
+  range, or deliberately as a hard case for an estimator, not as a neutral
+  default.
 
   Unlike \code{evolqg::RandomMatrix()}, this function also handles one and
   two traits with \code{method = "partial"}.
+
+  With \code{method = "factor"} the correlation matrix is
+  \eqn{R = \lambda\lambda^T + \mathrm{diag}(1 - \lambda^2)}, with
+  \eqn{\lambda_i = \sqrt{\rho} u_i}, where \eqn{u} is the positive loading
+  pattern scaled to a maximum of 1. The leading eigenvector is positive, so
+  PC1 is a size axis; the same \eqn{u} is used for every matrix, and only
+  \eqn{\rho} changes to reach the requested integration. This is the method
+  to use for size-dominated morphometric simulations: it reaches high
+  integration without the near-singular randomness of the partial method.
+  With equal loadings it is an equicorrelation matrix, whose relative
+  eigenvalue variance is \eqn{\rho^2}, so a target of 0.8 corresponds to
+  correlations of about 0.89.
 }
 \examples{
 set.seed(1)
@@ -79,6 +115,12 @@ eigen(G, symmetric = TRUE, only.values = TRUE)$values
 
 # Reproduce the evolqg construction
 random_covariance(2, n_matrices = 3, method = "partial")
+
+# A strongly integrated size axis: PC1 dominates and all loadings are positive
+S <- random_covariance(5, method = "factor", integration = 0.8)
+R <- cov2cor(S)
+round(R, 2)
+eigen(R, symmetric = TRUE)$vectors[, 1]
 }
 \seealso{
 \code{\link{animal_prior_draws}}, \code{\link{size_shape}}

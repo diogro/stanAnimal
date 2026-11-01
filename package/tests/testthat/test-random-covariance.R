@@ -9,8 +9,8 @@ test_that("random_covariance returns a named positive-definite covariance", {
   expect_equal(unname(diag(cov2cor(S))), rep(1, 4))
 })
 
-test_that("random_covariance supports both correlation models", {
-  for (method in c("lkj", "partial")) {
+test_that("random_covariance supports every correlation model", {
+  for (method in c("lkj", "partial", "factor")) {
     set.seed(2)
     S <- random_covariance(5, min_var = 0.5, max_var = 1.5, method = method)
     expect_true(all(diag(S) >= 0.5 & diag(S) <= 1.5))
@@ -52,6 +52,50 @@ test_that("random_covariance uses the LKJ shape and trait names", {
   expect_gt(min(eigen(S, symmetric = TRUE, only.values = TRUE)$values), 0)
 })
 
+test_that("factor method targets integration with a positive size axis", {
+  relvar <- stanimal:::.relative_eigen_variance
+  for (target in c(0, 0.3, 0.8)) {
+    set.seed(6)
+    S <- random_covariance(6, method = "factor", integration = target)
+    R <- cov2cor(S)
+    expect_equal(unname(diag(R)), rep(1, 6))
+    expect_equal(R, t(R), ignore_attr = TRUE)
+    expect_gt(min(eigen(R, symmetric = TRUE, only.values = TRUE)$values), 0)
+    expect_equal(relvar(R), target, tolerance = 1e-6)
+    if (target > 0) {
+      axis <- eigen(R, symmetric = TRUE)$vectors[, 1]
+      expect_true(all(axis > 0) || all(axis < 0))
+    }
+  }
+})
+
+test_that("factor method spans integration but keeps the size axis", {
+  set.seed(7)
+  S <- random_covariance(5, n_matrices = 20, method = "factor")
+  r2 <- vapply(S, function(x) stanimal:::.relative_eigen_variance(cov2cor(x)),
+               numeric(1))
+  expect_true(all(r2 >= 0.1 & r2 <= 0.8))
+  expect_gt(stats::var(r2), 0)
+  axes <- vapply(S, function(x) {
+    axis <- eigen(cov2cor(x), symmetric = TRUE)$vectors[, 1]
+    if (sum(axis) < 0) axis <- -axis
+    axis
+  }, numeric(5))
+  expect_equal(axes, matrix(axes[, 1], 5, 20), ignore_attr = TRUE,
+               tolerance = 1e-8)
+})
+
+test_that("factor loadings fix the size pattern", {
+  loadings <- c(0.5, 1, 1.5, 2)
+  S <- random_covariance(4, method = "factor", loadings = loadings,
+                         integration = 0.5, variances = rep(1, 4))
+  R <- cov2cor(S)
+  ratios <- R[upper.tri(R)] / outer(loadings, loadings)[upper.tri(R)]
+  expect_equal(ratios, rep(ratios[1], length(ratios)), tolerance = 1e-8)
+  axis <- eigen(R, symmetric = TRUE)$vectors[, 1]
+  expect_true(all(axis > 0) || all(axis < 0))
+})
+
 test_that("random_covariance validates its inputs", {
   expect_error(random_covariance(0), "`n_traits`")
   expect_error(random_covariance(3, n_matrices = 0), "`n_matrices`")
@@ -63,4 +107,18 @@ test_that("random_covariance validates its inputs", {
   expect_error(random_covariance(3, lkj_prior = 0), "`lkj_prior`")
   expect_error(random_covariance(3, trait_names = "a"), "`trait_names`")
   expect_error(random_covariance(3, method = "none"), "should be one of")
+  expect_error(random_covariance(3, method = "factor", integration = 1),
+               "`integration`")
+  expect_error(random_covariance(3, method = "factor", integration = "x"),
+               "`integration`")
+  expect_error(random_covariance(3, method = "factor",
+                                 integration = c(0.5, 0.2)), "increasing")
+  expect_error(random_covariance(3, method = "factor", loadings = c(1, 0, 1)),
+               "`loadings`")
+  expect_error(random_covariance(3, method = "factor", loadings = 1),
+               "`loadings`")
+  expect_error(random_covariance(3, loadings = rep(1, 3)),
+               "only used by method")
+  expect_error(random_covariance(3, integration = 0.5),
+               "only used by method")
 })
