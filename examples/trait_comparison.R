@@ -51,19 +51,14 @@ for (g in 2:n_gen) {
 }
 A <- makeA(ped)
 
-# Random positive-definite G and E with bounded eigenvalues. A plain Wishart
-# draw can be nearly singular (smallest eigenvalue near 0), which puts REML
-# estimates on the boundary and makes the comparison depend on the prior more
-# than on the engine.
-random_cov <- function(k, variances) {
-  precision <- crossprod(matrix(rnorm(k * k), k)) + diag(k)
-  covariance <- cov2cor(precision)
-  covariance * outer(sqrt(variances), sqrt(variances))
-}
+# Simulated truth from the package's LKJ construction: correlations are shrunk
+# toward zero, so G and E are well conditioned and REML does not sit on the
+# boundary.
 set.seed(4321)
-G <- random_cov(n_traits, runif(n_traits, 0.7, 1.3))
-E <- random_cov(n_traits, runif(n_traits, 0.7, 1.3))
-dimnames(G) <- dimnames(E) <- list(traits, traits)
+G <- random_covariance(n_traits, min_var = 0.7, max_var = 1.3,
+                       trait_names = traits)
+E <- random_covariance(n_traits, min_var = 0.7, max_var = 1.3,
+                       trait_names = traits)
 
 n <- nrow(A)
 X <- cbind(Intercept = 1, sex = rbinom(n, 1, 0.5), age = round(rnorm(n, 3, 0.5), 2))

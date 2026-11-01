@@ -13,6 +13,12 @@
 
 ## New features
 
+* `random_covariance()` draws random covariance matrices for simulations, either
+  from the LKJ distribution used as a prior by `lmm_animal()` (default) or from
+  the partial-correlation construction of `evolqg::RandomMatrix()`. The port
+  handles one and two traits, where the original indexing fails, and the LKJ
+  default avoids the nearly singular matrices the partial method often
+  produces. `trait_comparison.R` uses it for the simulated truth.
 * `fit_draws()` extracts the draws of a fit as arrays indexed by trait, with
   draws last and every dimension named: `G`, `E`, `P`, `corrG`, `corrE`,
   `corrP` are trait by trait by draw arrays and `h2`, `sigma_G`, `sigma_E` and
