@@ -121,6 +121,7 @@ test_that("plot_G_ellipses validates the interval and ellipse arguments", {
   expect_error(plot_G_ellipses(d, Y, n_show = -3), "`n_show`")
   expect_error(plot_G_ellipses(d, Y, n_show = "10"), "`n_show`")
   expect_error(plot_G_ellipses(d, Y, n_show = 1.5), "`n_show`")
+  expect_error(plot_G_ellipses(d, Y, n_show = .Machine$integer.max + 1), "at most")
   expect_s3_class(plot_G_ellipses(d, Y, level = 0.5, prob = 0.9, n_show = 3),
                   "ggplot")
 })
@@ -158,6 +159,12 @@ test_that("animal_prior_draws rejects invalid shapes and counts", {
   expect_error(animal_prior_draws(2, n = 0), "`n`")
   expect_error(animal_prior_draws(2, n = 1.5), "`n`")
   expect_equal(nrow(animal_prior_draws(1, n = 7)), 7)
+
+  # a count above the integer limit used to coerce to NA with a warning
+  too_big <- .Machine$integer.max + 1
+  expect_error(animal_prior_draws(2, n = too_big), "at most 2147483647")
+  expect_error(animal_prior_draws(too_big, n = 5), "`n_traits`.*at most")
+  expect_no_warning(expect_error(animal_prior_draws(2, n = too_big), "at most"))
 })
 
 test_that("the prior plots reject an invalid n_prior", {

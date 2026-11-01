@@ -13,6 +13,9 @@
 .check_count <- function(x, arg) {
   if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x < 1 || x != trunc(x))
     stop("`", arg, "` must be one whole number, at least 1.", call. = FALSE)
+  # beyond this the coercion to integer is NA, which callers would use as a size
+  if (x > .Machine$integer.max)
+    stop("`", arg, "` must be at most ", .Machine$integer.max, ".", call. = FALSE)
   as.integer(x)
 }
 

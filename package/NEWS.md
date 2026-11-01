@@ -65,6 +65,8 @@
   was silently truncated and `0` failed with an unrelated error inside
   `matrix()`. `lmm_animal()` and `lmm_multiCov()` reject an invalid `lkj_prior`
   too, instead of losing every chain inside Stan.
+* A count above `.Machine$integer.max` is rejected rather than coerced to `NA`
+  with a warning, which used to reach the callers as an invalid matrix size.
 
 * The `control` list now reaches both engines. With `cmdstanr`, only
   `adapt_delta` and `max_treedepth` were forwarded and every other entry was
