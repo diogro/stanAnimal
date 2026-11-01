@@ -35,7 +35,9 @@ A list of posterior draws: \code{G} and \code{R} are covariance
   contains trait-wise variance ratios, and \code{iterations} gives the
   retained iteration numbers. Quantities are indexed by trait first and draw
   last, from named dimensions, the layout that
-  \code{\link{back_transform}} returns as well.
+  \code{\link{back_transform}} returns as well. \code{\link{fit_draws}}
+  accepts this list and returns the same layout with \code{R} named
+  \code{E}, plus the quantities derived from it.
 }
 \description{
 Fits a univariate or multivariate linear animal model with fixed effects and relatedness

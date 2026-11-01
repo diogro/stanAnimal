@@ -73,14 +73,16 @@ posterior::summarise_draws(beta_draws_var)
 posterior::summarise_draws(beta_draws_h2)
 
 # Posterior means compared with the simulated truth
-post_means = function(fit) {
-  s = fit$summary(c("h2", "sigma_G", "sigma_E"), "mean")
-  setNames(s$mean, s$variable)
-}
-rbind(variance = post_means(fit_var), h2 = post_means(fit_h2), truth = truth)
+rbind(variance = c(h2 = unname(draws_mean(fit_var, "h2")),
+                   sigma_G = unname(draws_mean(fit_var, "sigma_G")),
+                   sigma_E = unname(draws_mean(fit_var, "sigma_E"))),
+      h2 = c(h2 = unname(draws_mean(fit_h2, "h2")),
+             sigma_G = unname(draws_mean(fit_h2, "sigma_G")),
+             sigma_E = unname(draws_mean(fit_h2, "sigma_E"))),
+      truth = truth)
 
 # Fixed effects, original scale
-round(setNames(fit_var$summary("beta", "mean")$mean, colnames(X)), 3)
+round(drop(draws_mean(fit_var, "beta")), 3)
 t(beta)
 
 ## Diagnostics

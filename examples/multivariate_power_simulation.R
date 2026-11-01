@@ -110,9 +110,7 @@ simulate_one <- function(n, replicate) {
       cmd_stan = TRUE,
       residual_structure = "unstructured"
     )
-    draws <- posterior::as_draws_matrix(fit$draws(c("corrG", "h2")))
-    corr_draws <- function(i, j) draws[, sprintf("corrG[%d,%d]", i, j)]
-    h2_draws <- function(trait) draws[, sprintf("h2[%d]", trait)]
+    draws <- fit_draws(fit)
     fit_summary <- fit$summary(variables = "corrG")
     sampler <- data.frame(
       max_rhat_corrG = max(fit_summary$rhat, na.rm = TRUE),
@@ -121,11 +119,9 @@ simulate_one <- function(n, replicate) {
     )
   } else {
     fit <- lmm_animal_gibbs(Y, X, A, iter = iterations, warmup = warmup, thin = gibbs_thin)
-    corr_array <- apply(fit$G, 3L, stats::cov2cor)
-    corr_draws <- function(i, j) corr_array[(j - 1L) * n_traits + i, ]
-    h2_draws <- function(trait) fit$h2[trait, ]
+    draws <- fit_draws(fit)
     ess <- vapply(trait_pairs, function(pair)
-      posterior::ess_bulk(corr_draws(pair[1L], pair[2L])), numeric(1))
+      posterior::ess_bulk(draws$corrG[pair[1L], pair[2L], ]), numeric(1))
     sampler <- data.frame(
       max_rhat_corrG = NA_real_,
       min_ess_bulk_corrG = min(ess),
@@ -136,7 +132,7 @@ simulate_one <- function(n, replicate) {
   pair_rows <- lapply(trait_pairs, function(pair) {
     trait_i <- pair[1L]
     trait_j <- pair[2L]
-    values <- corr_draws(trait_i, trait_j)
+    values <- draws$corrG[trait_i, trait_j, ]
     lower <- unname(stats::quantile(values, 0.025))
     upper <- unname(stats::quantile(values, 0.975))
     truth <- correlation_truth[trait_i, trait_j]
@@ -158,7 +154,7 @@ simulate_one <- function(n, replicate) {
   })
 
   h2_rows <- lapply(seq_len(n_traits), function(trait) {
-    values <- h2_draws(trait)
+    values <- draws$h2[trait, ]
     lower <- unname(stats::quantile(values, 0.025))
     upper <- unname(stats::quantile(values, 0.975))
     data.frame(

@@ -65,19 +65,23 @@ dim(gibbs$beta)
 dim(gibbs$h2)
 
 ## Posterior means compared with the truth
-G_hat <- apply(gibbs$G, 1:2, mean)
-R_hat <- apply(gibbs$R, 1:2, mean)   # residual covariance, the analogue of E
+# fit_draws() gives the same named arrays for the Gibbs sampler; its residual
+# covariance R comes back as E, the name the Stan models use
+gibbs_post <- fit_draws(gibbs)
+gibbs_post
+G_hat <- draws_mean(gibbs_post, "G")
+R_hat <- draws_mean(gibbs_post, "E")
 round(G_hat, 2)
 round(G, 2)
 round(R_hat, 2)
 round(E, 2)
 
 # Fixed effects, original scale: rows are traits, columns the columns of X
-beta_hat <- apply(gibbs$beta, 1:2, mean)
+beta_hat <- draws_mean(gibbs_post, "beta")
 round(beta_hat, 2)
 t(B)
 
-round(rowMeans(gibbs$h2), 2)
+round(draws_mean(gibbs_post, "h2"), 2)
 round(h2_true, 2)
 
 ## Summaries as posterior draws

@@ -170,10 +170,11 @@ print.size_shape <- function(x, ...) {
 #'   for size or a shape axis does not correspond to a single original trait.
 #'
 #'   Draws are the last dimension, as in \code{\link{lmm_animal_gibbs}}, so
-#'   posterior summaries are one \code{apply()} away:
-#'   \code{apply(post$G, c(1, 2), mean)} is the posterior mean of \code{G} on
-#'   the trait scale, and \code{apply(post$corrG, c(1, 2), quantile, 0.05)} its
-#'   5\% quantile.
+#'   posterior summaries are direct: \code{draws_mean(post, "G")} is the
+#'   posterior mean of \code{G} on the trait scale, and
+#'   \code{draws_quantile(post, "corrG", probs = 0.05)} its 5\% quantile.
+#'   \code{\link{fit_draws}} also accepts this object and returns the same
+#'   arrays.
 #' @seealso \code{\link{size_shape}}, \code{\link{rename_beta}},
 #'   \code{\link{to_draws_list}}
 #' @examples
@@ -187,8 +188,8 @@ print.size_shape <- function(x, ...) {
 #' colnames(m) <- c(names_mat("G"), names_mat("E"))
 #' post <- back_transform(m, ss)
 #' dim(post$G)                    # traits x traits x draws
-#' apply(post$G, c(1, 2), mean)   # posterior mean G on the trait scale
-#' apply(post$h2, 1, mean)
+#' draws_mean(post, "G")          # posterior mean G on the trait scale
+#' draws_mean(post, "h2")
 #' @export
 back_transform <- function(fit, transform) {
   if (!inherits(transform, "size_shape"))

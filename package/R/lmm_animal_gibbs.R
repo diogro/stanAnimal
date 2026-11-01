@@ -24,7 +24,9 @@
 #'   contains trait-wise variance ratios, and \code{iterations} gives the
 #'   retained iteration numbers. Quantities are indexed by trait first and draw
 #'   last, from named dimensions, the layout that
-#'   \code{\link{back_transform}} returns as well.
+#'   \code{\link{back_transform}} returns as well. \code{\link{fit_draws}}
+#'   accepts this list and returns the same layout with \code{R} named
+#'   \code{E}, plus the quantities derived from it.
 #' @details Fixed effects have an improper flat prior. Genetic and residual
 #'   covariance matrices have inverse-Wishart priors with degrees of freedom
 #'   \code{K + 1} and scale matrix \code{(K + 1) I / 2}, where \code{K} is

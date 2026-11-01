@@ -46,11 +46,11 @@ E3 <- matrix(c(1.0, 0.3, 0.0,
                0.3, 0.9, 0.2,
                0.0, 0.2, 0.7), 3)
 
-# Posterior mean of a matrix-valued variable such as "G" from a CmdStanMCMC.
+# Posterior mean of a matrix-valued variable such as "G" from a fit.
 post_matrix <- function(fit, name, K) {
-  s <- fit$summary(name, "mean")
-  matrix(s$mean[match(sprintf("%s[%d,%d]", name, rep(seq_len(K), K),
-                              rep(seq_len(K), each = K)), s$variable)], K)
+  out <- draws_mean(fit, name)
+  dimnames(out) <- NULL
+  out
 }
 
 expect_clean_fit <- function(fit, rhat_max = 1.05) {

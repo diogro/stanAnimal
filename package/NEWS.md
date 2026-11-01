@@ -11,6 +11,26 @@
   first fit after upgrading recompiles; `stanimal_clear_cache()` removes the old
   files.
 
+## New features
+
+* `fit_draws()` extracts the draws of a fit as arrays indexed by trait, with
+  draws last and every dimension named: `G`, `E`, `P`, `corrG`, `corrE`,
+  `corrP` are trait by trait by draw arrays and `h2`, `sigma_G`, `sigma_E` and
+  `sigma_P` are trait by draw matrices, so posterior means and correlations no
+  longer need a helper that matches `G[i,j]` variable names. It accepts the
+  fits of `lmm_animal()`, `lm_phen_cov()` and `lmm_animal_gibbs()` (whose `R` is
+  returned as `E`), `posterior` draws objects and `back_transform()` output,
+  and derives quantities the fit does not report (`P`, `corrE`, `corrP`,
+  `sigma_G`, `sigma_E`, `sigma_P`, `h2`).
+* `draws_mean()` and `draws_quantile()` summarise a fit or an `fit_draws()`
+  object without the draw dimension, so `draws_mean(fit, "G")` is the posterior
+  mean as a trait by trait matrix and `draws_quantile(fit, "corrG")` gives its
+  interval. The examples and the README use them instead of defining their own
+  `post_mean()` helper.
+* `lmm_animal()` and `lm_phen_cov()` keep the response column names on the
+  cmdstanr fit, so `fit_draws()` and the summary functions label the trait
+  dimensions without an extra argument.
+
 ## Improvements
 
 * Declare the Stan project's R-universe as an additional repository for

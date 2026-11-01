@@ -69,18 +69,12 @@ posterior::summarise_draws(beta_draws)
 
 # Posterior means of G and E. The traits are log distances, so variances are
 # small numbers: h2 and the correlations are scale free and easier to read.
-post_mean <- function(name, k = ncol(design$Y)) {
-  s <- fit$summary(name, "mean")
-  matrix(s$mean[match(sprintf("%s[%d,%d]", name, rep(seq_len(k), k),
-                              rep(seq_len(k), each = k)), s$variable)], k,
-         dimnames = list(traits, traits))
-}
-signif(post_mean("G"), 2)
-signif(post_mean("E"), 2)
-round(post_mean("corrG"), 2)
+signif(draws_mean(fit, "G"), 2)
+signif(draws_mean(fit, "E"), 2)
+round(draws_mean(fit, "corrG"), 2)
 # P = G + E was estimated after the fixed effects, so it is smaller than the raw
 # covariance of the traits, which also contains the sex, age and line effects
-head(signif(post_mean("P"), 2))
+head(signif(draws_mean(fit, "P"), 2))
 head(signif(cov(residuals(lm(cbind(IS_PM, NSL_NA, PT_BA, BA_OPI) ~ SEX + AGE + LIN,
                         dat))), 2))
 
@@ -104,7 +98,7 @@ print(plot_G_ellipses(fit, design$Y, trait_names = traits, n_show = 100,
                       X = design$X))
 
 # Estimated genetic correlations next to the observed phenotypic correlations
-print(plot_corr(post_mean("corrG"), "Posterior mean corrG") +
+print(plot_corr(draws_mean(fit, "corrG"), "Posterior mean corrG") +
         plot_corr(cor(dat[traits]), "Observed P correlations"))
 
 dev.off()
@@ -139,8 +133,8 @@ rbind(traits = c(elapsed = time_traits[["elapsed"]],
 # traits by traits by draws array, already named after the traits, the same
 # layout lmm_animal_gibbs() uses
 post_ss <- back_transform(fit_ss, ss)
-G_traits <- post_mean("G")
-G_size_shape <- apply(post_ss$G, c(1, 2), mean)
+G_traits <- draws_mean(fit, "G")
+G_size_shape <- draws_mean(post_ss, "G")
 round(G_traits, 4)
 round(G_size_shape, 4)
 # Largest difference between the two estimates, relative to the largest element

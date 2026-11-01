@@ -113,6 +113,25 @@ rename_beta(fit, "beta")
 
 With `cmd_stan = FALSE` the fit is a `stanfit` object from `rstan`, with `beta` already named after the columns of `X`.
 
+### Covariance matrices as matrices
+
+`fit$draws()` reports `G` one element per variable (`G[1,1]`, `G[2,1]`, ...), so getting a matrix back means matching and reshaping names by hand. `fit_draws()` does that once and returns arrays indexed by trait, with draws last and every dimension named:
+
+```r
+d <- fit_draws(fit)
+d$G                                # traits x traits x draws
+d$E
+d$corrE                            # derived from the E draws
+d$h2                               # traits x draws
+d$beta                             # traits x terms x draws
+
+round(draws_mean(fit, "G"), 2)     # posterior mean G, as a matrix
+round(draws_mean(fit, "corrE"), 2)
+draws_quantile(fit, "corrG", probs = c(0.05, 0.95))   # 90% interval per element
+```
+
+`fit_draws()` also accepts `lmm_animal_gibbs()` fits (returning its `R` as `E`), `lm_phen_cov()` fits, `posterior` draws objects and the output of `back_transform()`. Quantities the fit does not report, such as `corrE` or `P`, are derived from the ones it does.
+
 ## Formula interface
 
 `animal_design()` builds `Y` and `X` from a formula and a data frame, for when you would rather write the model the usual way than assemble the matrices by hand:
@@ -123,7 +142,7 @@ fit <- lmm_animal(design$Y, design$X, A)
 ```
 
 - the left-hand side is a single response or a `cbind()` of several traits, and the columns of `Y` are named after them;
-- `X` is the fixed-effects design matrix, so its columns match the `beta` draws reported by the fit; factors are dummy coded and the intercept is kept unless the formula removes it, which is only allowed when the remaining columns still sum to a constant (the 0/1 indicators of a factor, for example, but not `y ~ 0 + x`), because the models centre the responses and report their mean back through the design;
+- `X` is the fixed-effects design matrix, so its columns match the `beta` draws reported by the fit; factors are dummy-coded and the intercept is kept unless the formula removes it, which is only allowed when the remaining columns still sum to a constant (the 0/1 indicators of a factor, for example, but not `y ~ 0 + x`), because the models centres the responses and report their mean back through the design;
 - random-effect terms such as `(1 | animal)` are ignored, so `lme4`-style formulas can be reused unchanged — relatedness is supplied through `A`;
 - rows with missing values are dropped (`na.action = stats::na.omit` by default), and the individuals kept, in row order, are returned in `attr(design, "individuals")`. Because `Y` keeps them as row names, a named `A` is reordered to match automatically:
 
@@ -160,7 +179,7 @@ fit <- lmm_animal(design$Y, design$X, design$A)
 
 ## Size and shape reparametrization (use this when one PC dominates)
 
-**If the traits are morphometric and a single principal component explains most of their variance, fit size and shape scores instead of the raw traits.** In that situation the covariance is a long, thin ridge: size and shape are still estimable, but the raw parametrization samples poorly (divergences, low E-BFMI, many leapfrog steps) and the prior is spread over near-degenerate directions.
+**If the traits are morphometric and a single principal component explains most of their variance, fit size and shape scores instead of the raw traits.** In that situation the covariance is a long, thin ridge: size and shape are still estimable, but the raw parametrization samples poorly (divergences, low E-BFMI, many leapfrog steps, etc.) and the prior is spread over near-degenerate directions.
 
 Check the share of variance in the first principal component first:
 
@@ -182,11 +201,11 @@ design <- animal_design(f, dat)
 fit <- lmm_animal(design$Y, design$X, A)
 
 post <- back_transform(fit, ss)               # G, E, P, corrG, corrP and h2 on the log scale
-apply(post$G, c(1, 2), mean)                  # posterior mean G
-apply(post$h2, 1, mean)                       # posterior mean h2 per trait
+draws_mean(post, "G")                         # posterior mean G
+draws_mean(post, "h2")                        # posterior mean h2 per trait
 ```
 
-`to_draws_list()` reshapes that same object into one `posterior` draws matrix per quantity, for when you want the `posterior` or `bayesplot` tools on the back-transformed draws.
+`fit_draws()` accepts that same object if you want all of the draws in one list of arrays, and `to_draws_list()` reshapes it into one `posterior` draws matrix per quantity, for when you want the `posterior` or `bayesplot` tools on the back-transformed draws.
 
 `animal_design()` warns automatically when the response has three or more traits and its first principal component explains 80% or more of the variance.
 

@@ -68,6 +68,10 @@ stan_model$summary(c("h2", "G", "E", "corrG"))
 stan_model$summary(c("h2", "G", "E", "corrG"),
                    posterior::default_convergence_measures())
 
+# All draws as trait x trait x draw arrays, with named dimensions
+draws = fit_draws(stan_model)
+draws
+
 ## Sampler diagnostics (divergences, treedepth, E-BFMI)
 stan_model$diagnostic_summary()
 
@@ -75,30 +79,22 @@ stan_model$diagnostic_summary()
 beta_draws = rename_beta(stan_model, "beta")
 posterior::summarise_draws(beta_draws)
 
-# Residual correlations are not a model output; derive them from the draws
-pairs = which(lower.tri(diag(n_traits)), arr.ind = TRUE)
-E_draws = posterior::as_draws_matrix(stan_model$draws("E"))
-corrE_draws = t(apply(E_draws, 1, function(d) cov2cor(matrix(d, n_traits))[pairs]))
-colnames(corrE_draws) = sprintf("corrE[%d,%d]", pairs[, 1], pairs[, 2])
-posterior::summarise_draws(corrE_draws)
+# Residual correlations are not a model output; fit_draws() derives them
+# from the E draws, and the summary functions give matrices back
+round(draws_mean(stan_model, "corrE"), 2)
+round(draws_quantile(stan_model, "corrE", probs = c(0.05, 0.95)), 2)
 
 # Posterior means as matrices, compared with the simulated truth
-post_mean = function(name, k = n_traits) {
-  s = stan_model$summary(name, "mean")
-  matrix(s$mean[match(sprintf("%s[%d,%d]", name, rep(1:k, k), rep(1:k, each = k)),
-                      s$variable)], k)
-}
-G_hat = post_mean("G")
-E_hat = post_mean("E")
-round(G_hat, 2); round(G, 2)
-round(E_hat, 2); round(E, 2)
-round(cov2cor(post_mean("P")), 2); round(cov2cor(G + E), 2)
+round(draws_mean(stan_model, "G"), 2); round(G, 2)
+round(draws_mean(stan_model, "E"), 2); round(E, 2)
+round(draws_mean(stan_model, "corrP"), 2); round(cov2cor(G + E), 2)
 
 # Fixed effects, original scale: rows are traits, as in t(beta)
-beta_hat = matrix(stan_model$summary("beta", "mean")$mean, n_traits,
-                  dimnames = list(traits, colnames(X)))
-round(beta_hat, 2)
+round(draws_mean(stan_model, "beta"), 2)
 t(beta)
+
+# Pairs of traits, for the interval plots below
+pairs = which(lower.tri(diag(n_traits)), arr.ind = TRUE)
 
 ## Visualization
 # All figures are written to a single PDF
@@ -149,18 +145,19 @@ print(plot_G_ellipses(stan_model, Y, n_show = 100, X = X))
 par(mfrow = c(1, 3))
 corrplot.mixed(cor(a), upper = "ellipse", mar = c(0, 0, 2, 0),
                title = "Realized Breeding Values Correlations")
-corrplot.mixed(post_mean("corrG"), upper = "ellipse", mar = c(0, 0, 2, 0),
+corrplot.mixed(draws_mean(stan_model, "corrG"), upper = "ellipse", mar = c(0, 0, 2, 0),
                title = "Estimated Genetic Correlations")
 corrplot.mixed(cov2cor(G), upper = "ellipse", mar = c(0, 0, 2, 0),
                title = "True Genetic Correlations")
 par(mfrow = c(1, 1))
 
 # Heatmaps of the estimated and simulated genetic correlations
-print(plot_corr(post_mean("corrG"), "Estimated") + plot_corr(cov2cor(G), "True"))
+print(plot_corr(draws_mean(stan_model, "corrG"), "Estimated") +
+        plot_corr(cov2cor(G), "True"))
 
 # Posterior distribution of the eigenvalue variance of G
-G_draws <- as.array(stan_model$draws("G"))  # iterations x chains x traits x traits
-eig_var <- apply(G_draws, c(1, 2), function(d) CalcEigenVar(matrix(d, n_traits)))
+G_draws <- draws$G                        # traits x traits x draws
+eig_var <- apply(G_draws, 3, CalcEigenVar)
 eig_var_true <- CalcEigenVar(G)
 print(ggplot2::ggplot(data.frame(value = as.vector(eig_var)), ggplot2::aes(value)) +
         ggplot2::geom_density(fill = "grey70", colour = NA) +

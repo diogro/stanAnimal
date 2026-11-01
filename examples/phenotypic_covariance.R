@@ -49,8 +49,10 @@ cat(nrow(Y), "individuals,", ncol(Y), "model traits,", ncol(X), "fixed effects\n
 cov_fit = lm_phen_cov(Y, X, lkj_prior = 6, iter = 800,
                        warmup = 400, cores = 4,  chains = 4)
 
-# Summaries and sampler diagnostics (model scale: size and shape axes)
+# Posterior means and 95% intervals (model scale: size and shape axes)
 cov_fit$summary(c("sigma_P[1]", "P[1,1]", "P[2,2]", "corrP[1,2]"))
+round(draws_mean(cov_fit, "corrP")[1:3, 1:3], 3)
+round(draws_mean(cov_fit, "sigma_P"), 3)
 cov_fit$diagnostic_summary()
 
 # Fixed effects, named after the columns of X (model scale: one coefficient per
@@ -66,11 +68,11 @@ post = back_transform(cov_fit, ss)
 post
 k = length(traits)
 
-round(apply(post$sigma_P, 1, mean), 3)
-round(apply(post$corrP, c(1, 2), mean)[1:3, 1:3], 3)
+round(draws_mean(post, "sigma_P"), 3)
+round(draws_mean(post, "corrP")[1:3, 1:3], 3)
 
 # Posterior mean P on the log-trait scale, compared with the residual covariance
-P_hat = apply(post$P, c(1, 2), mean)
+P_hat = draws_mean(post, "P")
 round(P_hat, 3)
 round(cov(residuals(lm(log_traits ~ X - 1))), 3)
 
