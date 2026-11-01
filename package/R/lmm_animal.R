@@ -34,10 +34,10 @@
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics. A finite number above 0.
 #' @param beta_prior Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.
 #' @param parametrization Univariate models only. \code{"variance"} (default) estimates the genetic and residual standard deviations with half-normal priors and derives h2. \code{"h2"} estimates a total standard deviation and h2 with a beta prior (\code{beta_prior}). If the variance version shows low E-BFMI, a warning suggests switching to \code{"h2"}. Ignored for multivariate fits.
-#' @param iter number of MCMC iterations.
-#' @param warmup number of warmup iterations, must be smaller than iter
-#' @param chains number of chains to run.
-#' @param cores number of chains to run in parallel (cmdstanr only).
+#' @param iter Number of MCMC iterations, a whole number.
+#' @param warmup Number of warmup iterations, a whole number smaller than \code{iter}.
+#' @param chains Number of chains to run, a whole number.
+#' @param cores Number of chains to run in parallel (cmdstanr only), a whole number.
 #' @param model_file Optional path to a custom Stan file replacing the default model.
 #' @param control Named list of sampler controls, passed to whichever engine runs: \code{adapt_delta}, \code{adapt_engaged}, \code{max_treedepth}, \code{step_size} (rstan's \code{stepsize} is accepted), \code{init_buffer}, \code{term_buffer}, \code{window} and \code{metric}. Any other name is an error, so a control is never silently ignored.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
@@ -65,33 +65,32 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
   residual_structure <- match.arg(residual_structure)
   parametrization <- match.arg(parametrization)
   lkj_prior <- .check_positive(lkj_prior, "lkj_prior")
+  blend_A <- .check_flag(blend_A, "blend_A")
+  cmd_stan <- .check_flag(cmd_stan, "cmd_stan")
+  if (parametrization == "h2" &&
+      (!is.numeric(beta_prior) || length(beta_prior) != 2L ||
+         any(!is.finite(beta_prior)) || any(beta_prior <= 0)))
+    stop("`beta_prior` must be two positive numbers, the shapes of the beta ",
+         "prior on h2.", call. = FALSE)
+  .check_iterations(iter, warmup)
+  .check_sampler_size(chains, cores)
   YX <- .check_response_design(Y, X)
   Y <- YX$Y
   X <- YX$X
   A <- as.matrix(A)
 
-  if (!is.logical(blend_A) || length(blend_A) != 1L || is.na(blend_A))
-    stop("blend_A must be TRUE or FALSE.")
-
   n <- nrow(Y)
   A <- .check_relationship_matrix(A, Y)
-
-  a_scale <- max(1, max(abs(A)))
-  if (max(abs(A - t(A))) > 1e-8 * a_scale)
-    stop("A must be symmetric.")
-  A <- (A + t(A)) / 2
-  eigenvalues <- eigen(A, symmetric = TRUE, only.values = TRUE)$values
-  eigen_tol <- 1e-8 * max(1, max(abs(eigenvalues)))
-  if (min(eigenvalues) < -eigen_tol)
-    stop("A must be positive semidefinite.")
+  A <- .check_symmetric(A)
+  eigenvalues <- .check_positive_semidefinite(A)
 
   if (blend_A) {
     A <- 0.99 * A + 0.01 * diag(n)
-    eigenvalues <- eigen(A, symmetric = TRUE, only.values = TRUE)$values
-    eigen_tol <- 1e-8 * max(1, max(abs(eigenvalues)))
+    eigenvalues <- .relationship_eigenvalues(A)
   }
-  if (min(eigenvalues) <= eigen_tol)
-    stop("A must be positive definite for Stan; set blend_A = TRUE to regularize it.")
+  if (min(eigenvalues) <= .eigen_tolerance(eigenvalues))
+    stop("`A` must be positive definite for Stan; set `blend_A = TRUE` to ",
+         "regularize it.", call. = FALSE)
 
   cmd_stan <- .resolve_stan_backend(cmd_stan)
       
@@ -154,36 +153,65 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
   return(fit)
 }
 
-.check_response_design <- function(Y, X) {
-  if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
-  Y <- as.matrix(Y)
-  X <- as.matrix(X)
-  if (!is.numeric(Y) || any(!is.finite(Y)))
-    stop("Y must contain only finite numeric values.")
-  if (!is.numeric(X) || any(!is.finite(X)))
-    stop("X must contain only finite numeric values.")
+# Shared by every model function: Y and X, and the weights that restore the
+# response mean through the design. The Gibbs sampler does not shift the mean
+# through X, so it passes require_constant = FALSE.
+.check_response_design <- function(Y, X, require_constant = TRUE) {
+  Y <- .check_numeric_matrix(Y, "Y")
+  X <- .check_numeric_matrix(X, "X")
   p <- ncol(X)
   if (nrow(Y) < 2L || p < 1L || nrow(X) != nrow(Y))
-    stop("Y and X must have the same number of rows, and X must have columns.")
+    stop("`Y` and `X` must have the same number of rows, and `X` must have ",
+         "columns.", call. = FALSE)
   if (qr(X)$rank < p)
-    stop("X must have full column rank.")
-  # The models standardize the responses by their standard deviation, so a
-  # constant trait would divide by zero inside Stan
-  spread <- apply(Y, 2L, stats::sd)
-  constant <- spread <= 0
-  if (any(constant)) {
-    labels <- colnames(Y) %||% rep("", ncol(Y))
-    blank <- is.na(labels) | !nzchar(labels)
-    labels[blank] <- paste("column", which(blank))
-    stop("every trait in Y must vary, so that it can be standardized: ",
-         paste(labels[constant], collapse = ", "), call. = FALSE)
+    stop("`X` must have full column rank.", call. = FALSE)
+  .check_traits_vary(Y)
+  weights <- NULL
+  if (require_constant) {
+    weights <- .intercept_weights(X)
+    if (is.null(weights))
+      stop("`X` cannot represent a constant, so the mean of the response ",
+           "cannot be reported: include an intercept column, or the 0/1 ",
+           "indicator columns of every level of a factor.", call. = FALSE)
   }
-  weights <- .intercept_weights(X)
-  if (is.null(weights))
-    stop("X cannot represent a constant, so the mean of the response cannot be ",
-         "reported: include an intercept column, or the 0/1 indicator columns ",
-         "of every level of a factor.", call. = FALSE)
   list(Y = Y, X = X, x_mean_weight = weights)
+}
+
+# A trait without variance cannot be standardized, and gives no variance to
+# split into genetic and residual parts.
+.check_traits_vary <- function(Y) {
+  constant <- apply(Y, 2L, stats::sd) <= 0
+  if (!any(constant))
+    return(invisible(NULL))
+  labels <- colnames(Y) %||% rep("", ncol(Y))
+  blank <- is.na(labels) | !nzchar(labels)
+  labels[blank] <- paste("column", which(blank))
+  stop("every trait in `Y` must vary: ", paste(labels[constant], collapse = ", "),
+       ". A constant trait has no additive or residual variance to estimate.",
+       call. = FALSE)
+}
+
+# A symmetric relationship matrix, symmetrized against rounding.
+.check_symmetric <- function(A, arg = "A") {
+  scale <- max(1, max(abs(A)))
+  if (max(abs(A - t(A))) > 1e-8 * scale)
+    stop("`", arg, "` must be symmetric.", call. = FALSE)
+  (A + t(A)) / 2
+}
+
+.relationship_eigenvalues <- function(A) {
+  eigen(A, symmetric = TRUE, only.values = TRUE)$values
+}
+
+.eigen_tolerance <- function(values) 1e-8 * max(1, max(abs(values)))
+
+# Returns the eigenvalues, which the callers reuse for the positive definite
+# check after blending and, in the Gibbs sampler, to whiten the breeding values.
+.check_positive_semidefinite <- function(A, arg = "A") {
+  values <- .relationship_eigenvalues(A)
+  if (min(values) < -.eigen_tolerance(values))
+    stop("`", arg, "` must be positive semidefinite.", call. = FALSE)
+  values
 }
 
 # Weights w with X w equal to a column of ones, when the constant is in the
@@ -311,7 +339,7 @@ rename_beta <- function(fit, variables = NULL, ...) {
     model_path <- candidates[file.exists(candidates)][1L]
   }
   if (is.na(model_path) || !file.exists(model_path))
-    stop("Could not locate the requested Stan model source.")
+    stop("Could not locate the requested Stan model source.", call. = FALSE)
   paste(readLines(model_path, warn = FALSE), collapse = "\n")
 }
 

@@ -36,13 +36,13 @@ lmm_animal(
 
 \item{parametrization}{Univariate models only. \code{"variance"} (default) estimates the genetic and residual standard deviations with half-normal priors and derives h2. \code{"h2"} estimates a total standard deviation and h2 with a beta prior (\code{beta_prior}). If the variance version shows low E-BFMI, a warning suggests switching to \code{"h2"}. Ignored for multivariate fits.}
 
-\item{iter}{number of MCMC iterations.}
+\item{iter}{Number of MCMC iterations, a whole number.}
 
-\item{warmup}{number of warmup iterations, must be smaller than iter}
+\item{warmup}{Number of warmup iterations, a whole number smaller than \code{iter}.}
 
-\item{chains}{number of chains to run.}
+\item{chains}{Number of chains to run, a whole number.}
 
-\item{cores}{number of chains to run in parallel (cmdstanr only).}
+\item{cores}{Number of chains to run in parallel (cmdstanr only), a whole number.}
 
 \item{model_file}{Optional path to a custom Stan file replacing the default model.}
 

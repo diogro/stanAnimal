@@ -7,10 +7,10 @@
 #' @param Y Numeric response vector or matrix, with individuals in rows. Every trait must vary: constant traits cannot be standardized and are an error.
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations. A finite number above 0.
-#' @param iter number of MCMC iterations.
-#' @param warmup number of warmup iterations, must be smaller than iter.
-#' @param chains number of chains to run.
-#' @param cores number of chains to run in parallel (cmdstanr only).
+#' @param iter Number of MCMC iterations, a whole number.
+#' @param warmup Number of warmup iterations, a whole number smaller than \code{iter}.
+#' @param chains Number of chains to run, a whole number.
+#' @param cores Number of chains to run in parallel (cmdstanr only), a whole number.
 #' @param control Named list of sampler controls, passed to whichever engine runs: \code{adapt_delta}, \code{adapt_engaged}, \code{max_treedepth}, \code{step_size} (rstan's \code{stepsize} is accepted), \code{init_buffer}, \code{term_buffer}, \code{window} and \code{metric}. Any other name is an error, so a control is never silently ignored.
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
 #' @param model_file Optional path to a custom Stan file replacing the default model.
@@ -27,6 +27,9 @@ lm_phen_cov <- function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2)
                         chains = 4, cores = chains, control = list(adapt_delta = 0.99),
                         cmd_stan = TRUE, model_file = NULL, ...){
   lkj_prior <- .check_positive(lkj_prior, "lkj_prior")
+  cmd_stan <- .check_flag(cmd_stan, "cmd_stan")
+  .check_iterations(iter, warmup)
+  .check_sampler_size(chains, cores)
   YX <- .check_response_design(Y, X)
   Y <- YX$Y
   X <- YX$X

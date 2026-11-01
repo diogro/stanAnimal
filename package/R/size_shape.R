@@ -26,16 +26,16 @@
 pc1_variance_share <- function(Y) {
   Y <- as.matrix(Y)
   if (!is.numeric(Y) || any(!is.finite(Y)))
-    stop("Y must be a finite numeric matrix of traits.", call. = FALSE)
+    stop("`Y` must be a finite numeric matrix of traits.", call. = FALSE)
   k <- ncol(Y)
   if (is.null(k) || k < 1L)
-    stop("Y must have at least one column of traits.", call. = FALSE)
+    stop("`Y` must have at least one column of traits.", call. = FALSE)
   if (k == 1L)
     return(1)
   if (nrow(Y) < 3L)
-    stop("pc1_variance_share needs at least three individuals.", call. = FALSE)
+    stop("`Y` must have at least three individuals.", call. = FALSE)
   if (any(apply(Y, 2L, stats::sd) == 0))
-    stop("every trait in Y must vary.", call. = FALSE)
+    stop("every trait in `Y` must vary.", call. = FALSE)
   eigenvalues <- eigen(stats::cor(Y), symmetric = TRUE, only.values = TRUE)$values
   eigenvalues[1L] / sum(eigenvalues)
 }
@@ -98,19 +98,18 @@ pc1_variance_share <- function(Y) {
 size_shape <- function(Y, n_shape = NULL) {
   Y <- as.matrix(Y)
   if (!is.numeric(Y) || any(!is.finite(Y)))
-    stop("Y must be a finite numeric matrix of traits.", call. = FALSE)
+    stop("`Y` must be a finite numeric matrix of traits.", call. = FALSE)
   k <- ncol(Y)
   if (is.null(k) || k < 2L)
-    stop("size_shape needs at least two traits.", call. = FALSE)
+    stop("`Y` must have at least two traits.", call. = FALSE)
   if (nrow(Y) < 3L)
-    stop("size_shape needs at least three individuals.", call. = FALSE)
+    stop("`Y` must have at least three individuals.", call. = FALSE)
   if (is.null(n_shape))
     n_shape <- k - 1L
-  if (!is.numeric(n_shape) || length(n_shape) != 1L || is.na(n_shape) ||
-      n_shape != floor(n_shape) || n_shape < 1L || n_shape > k - 1L)
-    stop("n_shape must be an integer between 1 and ncol(Y) - 1 (", k - 1L, ").",
+  n_shape <- .check_count(n_shape, "n_shape")
+  if (n_shape > k - 1L)
+    stop("`n_shape` must be at most ncol(Y) - 1 (", k - 1L, ").",
          call. = FALSE)
-  n_shape <- as.integer(n_shape)
 
   size <- rowMeans(Y)
   shape <- Y - size
@@ -193,7 +192,7 @@ print.size_shape <- function(x, ...) {
 #' @export
 back_transform <- function(fit, transform) {
   if (!inherits(transform, "size_shape"))
-    stop("transform must be a size_shape object from size_shape().",
+    stop("`transform` must be a `size_shape` object from `size_shape()`.",
          call. = FALSE)
   B <- transform$loadings
   k_model <- ncol(B)
@@ -207,7 +206,7 @@ back_transform <- function(fit, transform) {
   m <- if (inherits(draws, "draws")) unclass(posterior::as_draws_matrix(draws))
        else as.matrix(draws)
   if (!is.matrix(m) || is.null(colnames(m)))
-    stop("draws must be a fit, a posterior draws object or a named matrix.",
+    stop("`fit` must be a fit, a posterior draws object or a named matrix of draws.",
          call. = FALSE)
 
   in_g <- .matrix_variable_names("G", k_model)
@@ -215,7 +214,7 @@ back_transform <- function(fit, transform) {
   in_p <- .matrix_variable_names("P", k_model)
   has_components <- all(in_g %in% colnames(m)) && all(in_e %in% colnames(m))
   if (!has_components && !all(in_p %in% colnames(m)))
-    stop("draws must contain G and E (lmm_animal) or P (lm_phen_cov) for ",
+    stop("the draws must contain G and E (lmm_animal) or P (lm_phen_cov) for ",
          k_model, " model traits, as named by the model functions for the ",
          "size_shape scores.", call. = FALSE)
 
@@ -274,7 +273,7 @@ back_transform <- function(fit, transform) {
 #' @export
 to_draws_list <- function(x) {
   if (!inherits(x, "size_shape_draws"))
-    stop("x must be a size_shape_draws object from back_transform().",
+    stop("`x` must be a `size_shape_draws` object from `back_transform()`.",
          call. = FALSE)
 
   components <- setdiff(names(x), "traits")

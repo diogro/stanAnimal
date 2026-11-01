@@ -56,7 +56,7 @@ test_that("animal_design dummy codes factors", {
 test_that("animal_design validates its input", {
   expect_error(animal_design(dat$trait, dat), "model formula")
   expect_error(animal_design(~sex, dat), "left-hand side")
-  expect_error(animal_design(trait ~ sex, data = NULL), "data must be")
+  expect_error(animal_design(trait ~ sex, data = NULL), "`data` must be")
   expect_error(animal_design(trait ~ sex + I(1 - sex), dat), "full rank")
   chars <- dat
   chars$trait <- letters[1:8]

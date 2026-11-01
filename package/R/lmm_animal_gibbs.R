@@ -3,15 +3,20 @@
 #' Fits a univariate or multivariate linear animal model with fixed effects and relatedness
 #' matrix using a single-chain Gibbs sampler. This is intended for quick
 #' simulations and checks; its priors differ from those in \code{lmm_animal}.
-#' @param Y Numeric response vector or matrix, with individuals in rows.
-#' @param X Numeric full-rank fixed-effects design matrix.
+#' @param Y Numeric response vector or matrix, with individuals in rows. Every
+#'   trait must vary, and is checked as in \code{\link{lmm_animal}}.
+#' @param X Numeric full-column-rank fixed-effects design matrix, with the same
+#'   rows as \code{Y}. Unlike the Stan models, it needs no column representing a
+#'   constant: the sampler does not shift the response mean through the design.
 #' @param A Symmetric positive-semidefinite relationship matrix, with rows and
 #'   columns in the same individual order as the rows of \code{Y}. When both
 #'   \code{A} and \code{Y} have row names they are used to put \code{A} in the
 #'   order of \code{Y}; names that disagree are an error.
-#' @param iter Total number of Gibbs iterations.
-#' @param warmup Number of initial iterations to discard.
-#' @param thin Keep every \code{thin}th iteration after burn-in.
+#' @param iter Total number of Gibbs iterations, a whole number.
+#' @param warmup Number of initial iterations to discard, a whole number smaller
+#'   than \code{iter}.
+#' @param thin Keep every \code{thin}th iteration after burn-in, a whole number;
+#'   \code{warmup + thin} must not exceed \code{iter}.
 #' @return A list of posterior draws: \code{G} and \code{R} are covariance
 #'   arrays, \code{beta} contains fixed-effect matrix draws, \code{h2}
 #'   contains trait-wise variance ratios, and \code{iterations} gives the
@@ -26,46 +31,24 @@
 #'   interchangeable.
 #' @export
 lmm_animal_gibbs <- function(Y, X, A, iter = 1000, warmup = floor(iter / 2), thin = 1) {
-  if (is.null(dim(Y))) Y <- matrix(Y, ncol = 1L)
-  Y <- as.matrix(Y)
-  X <- as.matrix(X)
-  A <- as.matrix(A)
-
-  if (!is.numeric(Y) || any(!is.finite(Y)))
-    stop("Y must contain only finite numeric values.")
-  if (!is.numeric(X) || any(!is.finite(X)))
-    stop("X must contain only finite numeric values.")
+  .check_iterations(iter, warmup, thin)
+  # No mean is shifted through the design here, so X needs no constant column.
+  YX <- .check_response_design(Y, X, require_constant = FALSE)
+  Y <- YX$Y
+  X <- YX$X
 
   n <- nrow(Y)
   k <- ncol(Y)
   p <- ncol(X)
-  if (n < 2L || p < 1L || nrow(X) != n)
-    stop("Y and X must have the same number of rows, and X must have columns.")
-  if (qr(X)$rank < p)
-    stop("X must have full column rank.")
-  A <- .check_relationship_matrix(A, Y)
-  if (!is.numeric(iter) || length(iter) != 1L || !is.finite(iter) ||
-      iter < 1 || iter != floor(iter) || !is.numeric(warmup) ||
-      length(warmup) != 1L || !is.finite(warmup) || warmup < 0 ||
-      warmup != floor(warmup) || !is.numeric(thin) || length(thin) != 1L ||
-      !is.finite(thin) || thin < 1 || thin != floor(thin) ||
-      warmup + thin > iter)
-    stop("Require integer iter >= warmup + thin and integer thin >= 1.")
+  A <- .check_relationship_matrix(as.matrix(A), Y)
+  A <- .check_symmetric(A)
+  .check_positive_semidefinite(A)
 
-  a_scale <- max(1, max(abs(A)))
-  if (max(abs(A - t(A))) > 1e-8 * a_scale)
-    stop("A must be symmetric.")
-  A <- (A + t(A)) / 2
   eig_A <- eigen(A, symmetric = TRUE)
-  eigen_tol <- 1e-8 * max(1, max(abs(eig_A$values)))
-  if (min(eig_A$values) < -eigen_tol)
-    stop("A must be positive semidefinite.")
   lambda <- pmax(eig_A$values, max(1e-12, max(abs(eig_A$values)) * 1e-8))
 
   y_centered <- sweep(Y, 2L, colMeans(Y), "-")
   y_cov <- crossprod(y_centered) / (n - 1)
-  if (any(diag(y_cov) <= 0))
-    stop("Every trait in Y must have nonzero variance.")
 
   keep <- seq.int(warmup + thin, iter, by = thin)
   n_keep <- length(keep)

@@ -6,9 +6,9 @@ A <- sim$A
 # The checks run before any Stan code, so these are fast.
 test_that("lmm_animal validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
-  expect_error(lmm_animal(Yna, X, A), "Y must contain only finite")
+  expect_error(lmm_animal(Yna, X, A), "`Y` must contain only finite")
   Xinf <- X; Xinf[2, 2] <- Inf
-  expect_error(lmm_animal(Y, Xinf, A), "X must contain only finite")
+  expect_error(lmm_animal(Y, Xinf, A), "`X` must contain only finite")
   expect_error(lmm_animal(Y, X[-1, ], A), "same number of rows")
   expect_error(lmm_animal(Y, cbind(X, X[, 2]), A), "full column rank")
 })
@@ -29,10 +29,10 @@ test_that("lmm_animal validates A and flags", {
 test_that("constant traits are rejected before the model is fitted", {
   # univariate: a constant response has no standard deviation to divide by
   expect_error(lmm_animal(rep(5, nrow(Y)), X, A),
-               "every trait in Y must vary")
+               "every trait in `Y` must vary")
   # multivariate: one constant column is enough
   expect_error(lmm_animal(cbind(Y, flat = 1), X, A),
-               "every trait in Y must vary.*: flat")
+               "every trait in `Y` must vary.*: flat")
   # partially named and unnamed responses still say which column it was
   expect_error(lmm_animal(cbind(Y, 1), X, A), "column 4")
   expect_error(lmm_animal(cbind(unname(Y[, 1]), 1), X, A), "column 2")
@@ -54,7 +54,7 @@ test_that("X must be able to represent a constant", {
 
 test_that("lm_phen_cov validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
-  expect_error(lm_phen_cov(Yna, X), "Y must contain only finite")
+  expect_error(lm_phen_cov(Yna, X), "`Y` must contain only finite")
   expect_error(lm_phen_cov(Y, X[-1, ]), "same number of rows")
   expect_error(lm_phen_cov(Y, cbind(X, X[, 2])), "full column rank")
 })
@@ -65,7 +65,7 @@ test_that("lmm_animal_gibbs validates its inputs", {
   expect_error(lmm_animal_gibbs(Y, X, A, iter = 10, warmup = 20), "iter")
   Ai <- diag(nrow(A)); Ai[1, 1] <- -1
   expect_error(lmm_animal_gibbs(Y, X, Ai), "positive semidefinite")
-  expect_error(lmm_animal_gibbs(cbind(Y[, 1], 1), X, A), "nonzero variance")
+  expect_error(lmm_animal_gibbs(cbind(Y[, 1], 1), X, A), "must vary")
 })
 
 test_that("custom model files are read and missing defaults error", {
@@ -92,4 +92,46 @@ test_that("an invalid LKJ shape is rejected before Stan runs", {
   expect_error(lmm_animal(Y, X, A, lkj_prior = c(1, 2)), "`lkj_prior`")
   expect_error(lm_phen_cov(Y, X, lkj_prior = 0), "`lkj_prior`")
   expect_error(lm_phen_cov(Y, X, lkj_prior = NA_real_), "`lkj_prior`")
+})
+
+test_that("the sampler arguments are checked the same way everywhere", {
+  # the two Stan fitters and the Gibbs sampler share .check_iterations()
+  stan_animal <- function(...) lmm_animal(Y, X, A, ...)
+  stan_phen <- function(...) lm_phen_cov(Y, X, ...)
+  gibbs <- function(...) lmm_animal_gibbs(Y, X, A, ...)
+  for (fit in list(stan_animal, stan_phen, gibbs)) {
+    expect_error(fit(iter = 0), "`iter`")
+    expect_error(fit(iter = 100.5), "`iter`")
+    expect_error(fit(iter = 100, warmup = 100), "`warmup` must be smaller")
+    expect_error(fit(iter = 100, warmup = -1), "`warmup`")
+  }
+  for (fit in list(stan_animal, stan_phen)) {
+    expect_error(fit(chains = 0), "`chains`")
+    expect_error(fit(cores = 2.5), "`cores`")
+    expect_error(fit(cmd_stan = NA), "`cmd_stan`")
+  }
+  expect_error(lmm_animal(Y, X, A, blend_A = "yes"), "`blend_A`")
+  expect_error(lmm_animal(Y, X, A, chains = 2, cores = 4), "`cores` must not exceed")
+  expect_error(lmm_animal(Y, X, A, parametrization = "h2", beta_prior = 0),
+               "`beta_prior`")
+})
+
+test_that("the Gibbs sampler shares the response and design checks", {
+  expect_error(lmm_animal_gibbs(cbind(Y, flat = 1), X, A), "flat")
+  expect_error(lmm_animal_gibbs(Y, X[-1, ], A), "same number of rows")
+  Yna <- Y; Yna[1, 1] <- NA
+  expect_error(lmm_animal_gibbs(Yna, X, A), "`Y` must contain only finite")
+  # no constant column is needed, because no mean is shifted through X
+  expect_no_error(lmm_animal_gibbs(Y, cbind(x = X[, "x"]), A, iter = 20,
+                                   warmup = 10))
+  # thinning is checked against the draws actually kept
+  expect_error(lmm_animal_gibbs(Y, X, A, iter = 10, warmup = 5, thin = 10),
+               "`iter` must leave at least one draw")
+  expect_error(lmm_animal_gibbs(Y, X, A, thin = 0), "`thin`")
+})
+
+test_that("errors are raised without a call, so they name the argument", {
+  # a call. = FALSE error from a package function reports no call at all
+  err <- tryCatch(lmm_animal("a", X, A), error = function(e) e)
+  expect_null(conditionCall(err))
 })

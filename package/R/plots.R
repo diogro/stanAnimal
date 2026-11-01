@@ -61,14 +61,14 @@ animal_parameter_draws <- function(fit, trait_names = NULL) {
   }
   df <- as.data.frame(posterior::as_draws_df(draws))
   h2_cols <- grep("^h2(\\[[0-9]+\\])?$", names(df), value = TRUE)
-  if (!length(h2_cols)) stop("No h2 draws found.")
+  if (!length(h2_cols)) stop("`fit` must contain `h2` draws.", call. = FALSE)
   trait_names <- .trait_names(trait_names, length(h2_cols))
   h2 <- as.matrix(df[h2_cols]); colnames(h2) <- trait_names
   cors <- NULL
   if (length(h2_cols) > 1L) {
     pairs <- .trait_pairs(trait_names)
     src <- sprintf("corrG[%d,%d]", pairs$i, pairs$j)
-    if (!all(src %in% names(df))) stop("No corrG draws found.")
+    if (!all(src %in% names(df))) stop("`fit` must contain `corrG` draws.", call. = FALSE)
     cors <- as.matrix(df[src]); colnames(cors) <- pairs$parameter
   }
   .long_draws(h2, cors, "posterior")
@@ -88,6 +88,7 @@ animal_parameter_draws <- function(fit, trait_names = NULL) {
 #' @export
 plot_prior_posterior <- function(fit, trait_names = NULL, lkj_prior = 2,
                                  n_prior = 4000, prior = NULL, ncol = 4) {
+  ncol <- .check_count(ncol, "ncol")
   d <- .prior_posterior(fit, trait_names, lkj_prior, n_prior, prior)
   ggplot2::ggplot(d, ggplot2::aes(.data$value, fill = .data$source, colour = .data$source)) +
     ggplot2::geom_density(alpha = 0.35, adjust = 1.2) +
@@ -149,7 +150,7 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 
 .trait_names <- function(trait_names, k) {
   if (is.null(trait_names)) return(if (k == 1L) "h2" else paste0("trait", seq_len(k)))
-  if (length(trait_names) != k) stop("trait_names must have one name per trait.")
+  if (length(trait_names) != k) stop("`trait_names` must have one name per trait.", call. = FALSE)
   as.character(trait_names)
 }
 
@@ -241,19 +242,18 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
   n_show <- .check_count(n_show, "n_show")
   level <- .check_prob(level, "level")
   prob <- .check_prob(prob, "prob")
-  Y <- as.matrix(Y)
+  Y <- .check_numeric_matrix(Y, "Y")
   k <- ncol(Y)
-  if (k < 2L) stop("At least two traits are needed.")
+  if (k < 2L) stop("`Y` must have at least two traits.", call. = FALSE)
   trait_names <- trait_names %||% colnames(Y) %||% paste0("trait", seq_len(k))
-  if (length(trait_names) != k) stop("trait_names must have one name per trait.")
+  if (length(trait_names) != k) stop("`trait_names` must have one name per trait.", call. = FALSE)
 
   p_label <- "Observed P"
   if (!is.null(X)) {
-    X <- as.matrix(X)
-    if (!is.numeric(X) || any(!is.finite(X)))
-      stop("X must contain only finite numeric values.")
+    X <- .check_numeric_matrix(X, "X")
     if (nrow(X) != nrow(Y) || ncol(X) < 1L)
-      stop("X must have one row per row of Y and at least one column.")
+      stop("`X` must have one row per row of `Y` and at least one column.",
+           call. = FALSE)
     Y <- Y - X %*% t(.fixed_effect_means(fit, k, ncol(X)))
     p_label <- "Residual P"
   }
@@ -263,7 +263,7 @@ plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
     draws <- fit$draws("G")
   df <- as.data.frame(posterior::as_draws_df(draws))
   g_names <- outer(seq_len(k), seq_len(k), function(i, j) sprintf("G[%d,%d]", i, j))
-  if (!all(g_names %in% names(df))) stop("G draws for all traits not found.")
+  if (!all(g_names %in% names(df))) stop("`fit` must contain `G` draws for every pair of traits.", call. = FALSE)
   G <- array(unlist(df[as.vector(g_names)]), c(nrow(df), k, k))
 
   mean_G <- apply(G, c(2, 3), mean)

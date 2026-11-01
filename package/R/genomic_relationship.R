@@ -40,39 +40,33 @@
 #' dim(G)
 genomic_relationship <- function(M, p = NULL, maf = 0.01, max_missing = 0.1,
                                  blend = 0) {
-  M <- as.matrix(M)
-  if (!is.numeric(M))
-    stop("M must be a numeric genotype matrix.")
+  M <- .check_numeric_matrix(M, "M", allow_na = TRUE)
   if (nrow(M) < 2L || ncol(M) < 1L)
-    stop("M must have at least two individuals and one marker.")
+    stop("`M` must have at least two individuals and one marker.",
+         call. = FALSE)
   if (any(M < 0 | M > 2, na.rm = TRUE))
-    stop("Genotypes must be between 0 and 2.")
-  if (any(is.infinite(M)))
-    stop("M must not contain infinite values.")
-  if (!is.numeric(maf) || length(maf) != 1L || is.na(maf) || maf < 0 || maf >= 0.5)
-    stop("maf must be a number in [0, 0.5).")
-  if (!is.numeric(max_missing) || length(max_missing) != 1L ||
-      is.na(max_missing) || max_missing < 0 || max_missing > 1)
-    stop("max_missing must be a number in [0, 1].")
-  if (!is.numeric(blend) || length(blend) != 1L || is.na(blend) ||
-      blend < 0 || blend >= 1)
-    stop("blend must be a number in [0, 1).")
+    stop("`M` must have genotype values between 0 and 2.", call. = FALSE)
+  maf <- .check_in_range(maf, "maf", 0, 0.5, open_high = TRUE)
+  max_missing <- .check_in_range(max_missing, "max_missing", 0, 1)
+  blend <- .check_in_range(blend, "blend", 0, 1, open_high = TRUE)
 
   constant <- rep(FALSE, ncol(M))
   if (is.null(p)) {
     p <- colMeans(M, na.rm = TRUE) / 2
     constant <- apply(M, 2L, function(x) length(unique(x[!is.na(x)])) < 2L)
   } else {
-    if (!is.numeric(p) || length(p) != ncol(M) || any(is.na(p)) ||
+    if (!is.numeric(p) || length(p) != ncol(M) || any(!is.finite(p)) ||
         any(p < 0 | p > 1))
-      stop("p must be a vector of allele frequencies in [0, 1], one per column of M.")
+      stop("`p` must be a vector of allele frequencies in [0, 1], one per ",
+           "column of `M`.", call. = FALSE)
   }
 
   missing_rate <- colMeans(is.na(M))
   keep <- is.finite(p) & pmin(p, 1 - p) > maf & pmin(p, 1 - p) > 0 &
     missing_rate <= max_missing & !constant
   if (!any(keep))
-    stop("No markers left after filtering; check maf, max_missing and the genotype coding.")
+    stop("no markers left after filtering: check `maf`, `max_missing` and the ",
+         "genotype coding.", call. = FALSE)
 
   M <- M[, keep, drop = FALSE]
   p <- p[keep]

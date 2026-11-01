@@ -25,13 +25,13 @@ lm_phen_cov(
 
 \item{lkj_prior}{Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations. A finite number above 0.}
 
-\item{iter}{number of MCMC iterations.}
+\item{iter}{Number of MCMC iterations, a whole number.}
 
-\item{warmup}{number of warmup iterations, must be smaller than iter.}
+\item{warmup}{Number of warmup iterations, a whole number smaller than \code{iter}.}
 
-\item{chains}{number of chains to run.}
+\item{chains}{Number of chains to run, a whole number.}
 
-\item{cores}{number of chains to run in parallel (cmdstanr only).}
+\item{cores}{Number of chains to run in parallel (cmdstanr only), a whole number.}
 
 \item{control}{Named list of sampler controls, passed to whichever engine runs: \code{adapt_delta}, \code{adapt_engaged}, \code{max_treedepth}, \code{step_size} (rstan's \code{stepsize} is accepted), \code{init_buffer}, \code{term_buffer}, \code{window} and \code{metric}. Any other name is an error, so a control is never silently ignored.}
 

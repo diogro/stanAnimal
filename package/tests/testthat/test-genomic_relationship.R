@@ -61,6 +61,6 @@ test_that("bad inputs are rejected", {
   expect_error(genomic_relationship(M, maf = 0.6), "maf")
   expect_error(genomic_relationship(M, max_missing = 2), "max_missing")
   expect_error(genomic_relationship(M, blend = 1), "blend")
-  expect_error(genomic_relationship(M, p = rep(0.5, 3)), "p must")
-  expect_error(genomic_relationship(matrix(1, 5, 5)), "No markers left")
+  expect_error(genomic_relationship(M, p = rep(0.5, 3)), "`p` must")
+  expect_error(genomic_relationship(matrix(1, 5, 5)), "no markers left")
 })

@@ -42,7 +42,7 @@ makeA <- function(pedigree) {
   ped <- .clean_pedigree(pedigree)
   ids <- as.character(ped$id)
   if (anyDuplicated(ids))
-    stop("pedigree has duplicated individuals.", call. = FALSE)
+    stop("`pedigree` has duplicated individuals.", call. = FALSE)
 
   parent_ids <- unique(c(as.character(ped$sire), as.character(ped$dam)))
   parent_ids <- parent_ids[!is.na(parent_ids)]
@@ -88,13 +88,13 @@ makeA <- function(pedigree) {
 .clean_pedigree <- function(pedigree) {
   ped <- as.data.frame(pedigree, stringsAsFactors = FALSE)
   if (ncol(ped) < 3L)
-    stop("pedigree must have at least three columns: individual, sire and dam.",
+    stop("`pedigree` must have at least three columns: individual, sire and dam.",
          call. = FALSE)
   ped <- ped[, 1:3, drop = FALSE]
   names(ped) <- c("id", "sire", "dam")
   ped[] <- lapply(ped, function(x) if (is.factor(x)) as.character(x) else x)
   if (anyNA(ped$id))
-    stop("pedigree has individuals with a missing ID.", call. = FALSE)
+    stop("`pedigree` has individuals with a missing ID.", call. = FALSE)
   for (parent in c("sire", "dam")) {
     x <- ped[[parent]]
     unknown <- if (is.numeric(x)) !is.na(x) & x == 0
@@ -138,7 +138,7 @@ makeA <- function(pedigree) {
     }
   }
   if (filled < n)
-    stop("the pedigree has a loop: some individuals appear as their own ",
+    stop("`pedigree` has a loop: some individuals appear as their own ",
          "ancestors.", call. = FALSE)
   order
 }

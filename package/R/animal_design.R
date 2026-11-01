@@ -89,12 +89,13 @@
 animal_design <- function(formula, data, na.action = stats::na.omit,
                           pedigree = NULL, genotypes = NULL, ...) {
   if (!inherits(formula, "formula"))
-    stop("formula must be a model formula, such as y ~ sex + age.", call. = FALSE)
+    stop("`formula` must be a model formula, such as `y ~ sex + age`.",
+         call. = FALSE)
   if (length(formula) < 3L)
-    stop("formula must have a response on the left-hand side, such as y ~ sex.",
+    stop("`formula` must have a response on the left-hand side, such as `y ~ sex`.",
          call. = FALSE)
   if (missing(data) || is.null(data))
-    stop("data must be a data frame holding the variables in formula.",
+    stop("`data` must be a data frame holding the variables in `formula`.",
          call. = FALSE)
   if (!is.null(pedigree) && !is.null(genotypes))
     stop("pass either pedigree or genotypes, not both.", call. = FALSE)
@@ -104,7 +105,7 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
                               drop.unused.levels = TRUE)
   response <- stats::model.response(frame)
   if (is.null(response))
-    stop("formula must have a response on the left-hand side.", call. = FALSE)
+    stop("`formula` must have a response on the left-hand side.", call. = FALSE)
 
   individuals <- rownames(frame)
   if (is.null(dim(response))) {
@@ -118,13 +119,14 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
       colnames(Y) <- paste0("trait", seq_len(ncol(Y)))
   }
   if (!is.numeric(Y))
-    stop("the response must be numeric: a single trait or cbind() of traits.",
+    stop("the response must be numeric: a single trait or `cbind()` of traits.",
          call. = FALSE)
   if (any(!is.finite(Y)))
-    stop("Y must contain only finite numeric values.", call. = FALSE)
+    stop("`Y` must contain only finite numeric values.", call. = FALSE)
 
   if (nrow(frame) < 2L)
-    stop("at least two complete rows are needed to build Y and X.", call. = FALSE)
+    stop("`data` must have at least two complete rows to build `Y` and `X`.",
+         call. = FALSE)
 
   if (ncol(Y) >= 3L && nrow(Y) >= 3L) {
     pc1_share <- pc1_variance_share(Y)
@@ -137,7 +139,7 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
 
   X <- stats::model.matrix(stats::terms(frame), data = frame)
   if (qr(X)$rank < ncol(X))
-    stop("the fixed-effects design matrix is not full rank; remove redundant ",
+    stop("the fixed-effects design matrix is not full rank: remove redundant ",
          "or collinear terms from the formula.", call. = FALSE)
   if (is.null(.intercept_weights(X)))
     stop("the fixed-effects design matrix cannot represent a constant, so the ",
@@ -176,7 +178,7 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
          "match the rows of Y.", call. = FALSE)
   missing <- setdiff(ids, A_ids)
   if (length(missing))
-    stop(length(missing), " rows of Y are not in the ", source, " (e.g. ",
+    stop(length(missing), " rows of `Y` are not in the ", source, " (e.g. ",
          paste(utils::head(missing, 3L), collapse = ", "), "). Set the ",
          "individual IDs as row names of data with rownames(data) <- data$id.",
          call. = FALSE)

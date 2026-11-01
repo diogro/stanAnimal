@@ -7,20 +7,25 @@
 lmm_animal_gibbs(Y, X, A, iter = 1000, warmup = floor(iter/2), thin = 1)
 }
 \arguments{
-\item{Y}{Numeric response vector or matrix, with individuals in rows.}
+\item{Y}{Numeric response vector or matrix, with individuals in rows. Every
+trait must vary, and is checked as in \code{\link{lmm_animal}}.}
 
-\item{X}{Numeric full-rank fixed-effects design matrix.}
+\item{X}{Numeric full-column-rank fixed-effects design matrix, with the same
+rows as \code{Y}. Unlike the Stan models, it needs no column representing a
+constant: the sampler does not shift the response mean through the design.}
 
 \item{A}{Symmetric positive-semidefinite relationship matrix, with rows and
 columns in the same individual order as the rows of \code{Y}. When both
 \code{A} and \code{Y} have row names they are used to put \code{A} in the
 order of \code{Y}; names that disagree are an error.}
 
-\item{iter}{Total number of Gibbs iterations.}
+\item{iter}{Total number of Gibbs iterations, a whole number.}
 
-\item{warmup}{Number of initial iterations to discard.}
+\item{warmup}{Number of initial iterations to discard, a whole number smaller
+than \code{iter}.}
 
-\item{thin}{Keep every \code{thin}th iteration after burn-in.}
+\item{thin}{Keep every \code{thin}th iteration after burn-in, a whole number;
+\code{warmup + thin} must not exceed \code{iter}.}
 }
 \value{
 A list of posterior draws: \code{G} and \code{R} are covariance

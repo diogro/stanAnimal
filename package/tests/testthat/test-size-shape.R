@@ -132,7 +132,7 @@ test_that("back_transform works with fewer shape axes than traits", {
 
 test_that("back_transform validates its input", {
   ss <- size_shape(Y4)
-  expect_error(back_transform(matrix(0, 1, 1), list()), "size_shape object")
+  expect_error(back_transform(matrix(0, 1, 1), list()), "`size_shape` object")
   m <- matrix(0, 2, 2, dimnames = list(NULL, c("G[1,1]", "E[1,1]")))
   expect_error(back_transform(m, ss), "must contain G and E")
   expect_error(back_transform(matrix(0, 2, 2), ss), "named matrix")

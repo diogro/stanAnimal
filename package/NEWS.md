@@ -6,6 +6,23 @@
   `cmdstanr` and use it in the installation guidance.
 * Update package metadata and DOI references for the CRAN release.
 
+* `lmm_animal_gibbs()` validates its arguments with the same helpers as the Stan
+  models instead of its own inline checks: `Y` and `X` through the shared
+  response and design check, `A` through the shared symmetry and definiteness
+  checks, and `iter`, `warmup` and `thin` through the shared iteration check.
+  Its messages now name the argument the caller passed.
+
+* Input checks are uniform across the package: every error names its argument in
+  backticks and is raised without a call, so the message points at `Y`,
+  `lkj_prior` or `maf` rather than at the internal function that noticed. The
+  checks live in `utils.R` and are reused, instead of each function testing its
+  own conditions inline.
+
+* `lmm_animal()` and `lm_phen_cov()` check `iter`, `warmup`, `chains`, `cores`,
+  `cmd_stan` and, for `lmm_animal()`, `blend_A` before fitting, so a warmup
+  longer than the run is an error naming the argument instead of a failure
+  inside the Stan call.
+
 # stanAnimal 0.5.0
 
 ## Breaking changes
