@@ -50,7 +50,7 @@ A <- as.matrix(nadiv::makeA(pedigree))
 fit <- lmm_animal(Y, X, A)
 ```
 
-`Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive semidefinite. When `A` and the rows of `Y` are both named, `A` is put in the row order of `Y`; names that disagree are an error. Without names, the rows are assumed to be in the same order and only the dimensions are checked.
+`Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive definite; if it is only positive semidefinite (duplicated individuals, for example), fit with `blend_A = TRUE`. When `A` and the rows of `Y` are both named, `A` is put in the row order of `Y`; names that disagree are an error. Without names, the rows are assumed to be in the same order and only the dimensions are checked.
 
 ## Formula interface
 
@@ -162,7 +162,12 @@ pc_dominance(log_traits)   # 1 / n_traits means no dominant gradient; > 0.8 mean
 ```r
 ss <- size_shape(log_traits)                  # individuals in rows, traits in columns
 dat <- cbind(morphology, ss$scores)           # size, shape1, shape2, ...
-design <- animal_design(cbind(size, shape1, shape2, shape3) ~ sex + site, dat)
+
+# the response is every score, so the model traits match the ones back_transform()
+# expects; build it from ss$traits instead of writing cbind(size, shape1, ...)
+f <- reformulate(c("sex", "site"),
+                 response = sprintf("cbind(%s)", paste(ss$traits, collapse = ", ")))
+design <- animal_design(f, dat)
 fit <- lmm_animal(design$Y, design$X, A)
 
 post <- back_transform(fit, ss)               # G, E, P, corrG, corrP and h2 on the log scale
