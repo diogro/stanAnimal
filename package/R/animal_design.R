@@ -1,7 +1,7 @@
 #' Response and design matrices from a model formula
 #'
 #' Builds the \code{Y} and \code{X} arguments of \code{\link{lmm_animal}},
-#' \code{\link{lmm_multiCov}} and \code{\link{lmm_animal_gibbs}} from a formula
+#' \code{\link{lm_phen_cov}} and \code{\link{lmm_animal_gibbs}} from a formula
 #' and a data frame, so a model written the usual way (\code{y ~ sex + age}, or
 #' \code{cbind(x, y, z) ~ sex + age}) can be fitted without building the
 #' matrices by hand.
@@ -59,8 +59,8 @@
 #'
 #'   If the response has three or more traits and its first principal component
 #'   explains at least 80\% of the variance, a warning suggests fitting size and
-#'   shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
-#'   reports that share.
+#'   shape scores instead (see \code{\link{size_shape}});
+#'   \code{\link{pc1_variance_share}} reports that share.
 #' @seealso \code{\link{lmm_animal}}, \code{\link{makeA}},
 #'   \code{\link{genomic_relationship}}, \code{\link{rename_beta}}
 #' @examples
@@ -127,10 +127,10 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
     stop("at least two complete rows are needed to build Y and X.", call. = FALSE)
 
   if (ncol(Y) >= 3L && nrow(Y) >= 3L) {
-    dominance <- pc_dominance(Y)
-    if (dominance >= 0.8)
+    pc1_share <- pc1_variance_share(Y)
+    if (pc1_share >= 0.8)
       warning("the first principal component of Y explains ",
-              round(100 * dominance), "% of the variance. If these are raw ",
+              round(100 * pc1_share), "% of the variance. If these are raw ",
               "measurements, consider fitting size and shape scores instead ",
               "(see ?size_shape).", call. = FALSE)
   }

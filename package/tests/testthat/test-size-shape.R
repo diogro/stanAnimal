@@ -72,18 +72,26 @@ test_that("back_transform maps G and E and recomputes corrG and h2", {
   expect_output(print(post), "size_shape_draws")
 })
 
-test_that("pc_dominance detects a single gradient", {
+test_that("pc1_variance_share detects a single gradient", {
   set.seed(7)
   gradient <- rnorm(50)
   correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
                       b = 2 * gradient + rnorm(50, sd = 0.2),
                       c = -gradient + rnorm(50, sd = 0.2))
-  expect_gt(pc_dominance(correlated), 0.95)
-  expect_lt(pc_dominance(matrix(rnorm(150), 50, 3)), 0.7)
-  expect_equal(pc_dominance(rnorm(50)), 1)
-  expect_error(pc_dominance(matrix("a", 5, 2)), "numeric")
-  expect_error(pc_dominance(cbind(1:5, rep(1, 5))), "must vary")
-  expect_error(pc_dominance(matrix(0, 5, 3)), "must vary")
+  expect_gt(pc1_variance_share(correlated), 0.95)
+  expect_lt(pc1_variance_share(matrix(rnorm(150), 50, 3)), 0.7)
+  expect_equal(pc1_variance_share(rnorm(50)), 1)
+  expect_error(pc1_variance_share(matrix("a", 5, 2)), "numeric")
+  expect_error(pc1_variance_share(cbind(1:5, rep(1, 5))), "must vary")
+  expect_error(pc1_variance_share(matrix(0, 5, 3)), "must vary")
+})
+
+test_that("renamed functions replace the old exports", {
+  ns <- asNamespace("stanAnimal")
+  expect_true(exists("pc1_variance_share", envir = ns, inherits = FALSE))
+  expect_true(exists("lm_phen_cov", envir = ns, inherits = FALSE))
+  expect_false(exists("pc_dominance", envir = ns, inherits = FALSE))
+  expect_false(exists("lmm_multiCov", envir = ns, inherits = FALSE))
 })
 
 test_that("animal_design warns about a dominant principal component", {

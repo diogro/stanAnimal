@@ -40,8 +40,8 @@ test_that("the bundled pedigree builds a usable relationship matrix", {
 test_that("the morphometrics are moderately integrated", {
   traits <- names(ratones_morpho)[12:46]
   Y <- log(as.matrix(ratones_morpho[, traits]))
-  dominance <- pc_dominance(Y)
-  expect_gt(dominance, 0.3)
-  expect_lt(dominance, 0.8)
+  pc1_share <- pc1_variance_share(Y)
+  expect_gt(pc1_share, 0.3)
+  expect_lt(pc1_share, 0.8)
   expect_gt(mean(cor(Y)[upper.tri(diag(ncol(Y)))]), 0.2)
 })

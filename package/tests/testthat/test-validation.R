@@ -37,14 +37,14 @@ test_that("constant traits are rejected before the model is fitted", {
   expect_error(lmm_animal(cbind(Y, 1), X, A), "column 4")
   expect_error(lmm_animal(cbind(unname(Y[, 1]), 1), X, A), "column 2")
   # the phenotypic model shares the check, and so does the rstan path
-  expect_error(lmm_multiCov(cbind(Y, flat = 1), X), "flat")
+  expect_error(lm_phen_cov(cbind(Y, flat = 1), X), "flat")
   expect_error(lmm_animal(cbind(Y, flat = 1), X, A, cmd_stan = FALSE), "flat")
 })
 
 test_that("X must be able to represent a constant", {
   no_intercept <- cbind(x = X[, "x"])
   expect_error(lmm_animal(Y, no_intercept, A), "cannot represent a constant")
-  expect_error(lmm_multiCov(Y, no_intercept), "cannot represent a constant")
+  expect_error(lm_phen_cov(Y, no_intercept), "cannot represent a constant")
   expect_error(lmm_animal(Y, no_intercept, A, cmd_stan = FALSE),
                "cannot represent a constant")
   # factor indicators span the constant, so they are fine
@@ -52,11 +52,11 @@ test_that("X must be able to represent a constant", {
     Y, stats::model.matrix(~ 0 + factor(rep(c(0, 1), length.out = nrow(Y))))))
 })
 
-test_that("lmm_multiCov validates Y and X", {
+test_that("lm_phen_cov validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
-  expect_error(lmm_multiCov(Yna, X), "Y must contain only finite")
-  expect_error(lmm_multiCov(Y, X[-1, ]), "same number of rows")
-  expect_error(lmm_multiCov(Y, cbind(X, X[, 2])), "full column rank")
+  expect_error(lm_phen_cov(Yna, X), "Y must contain only finite")
+  expect_error(lm_phen_cov(Y, X[-1, ]), "same number of rows")
+  expect_error(lm_phen_cov(Y, cbind(X, X[, 2])), "full column rank")
 })
 
 test_that("lmm_animal_gibbs validates its inputs", {
@@ -90,6 +90,6 @@ test_that("an invalid LKJ shape is rejected before Stan runs", {
   expect_error(lmm_animal(Y, X, A, lkj_prior = 0), "`lkj_prior`")
   expect_error(lmm_animal(Y, X, A, lkj_prior = -1), "`lkj_prior`")
   expect_error(lmm_animal(Y, X, A, lkj_prior = c(1, 2)), "`lkj_prior`")
-  expect_error(lmm_multiCov(Y, X, lkj_prior = 0), "`lkj_prior`")
-  expect_error(lmm_multiCov(Y, X, lkj_prior = NA_real_), "`lkj_prior`")
+  expect_error(lm_phen_cov(Y, X, lkj_prior = 0), "`lkj_prior`")
+  expect_error(lm_phen_cov(Y, X, lkj_prior = NA_real_), "`lkj_prior`")
 })

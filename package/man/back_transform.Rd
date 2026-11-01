@@ -10,7 +10,7 @@ back_transform(fit, transform)
 \item{fit}{A fit returned by \code{\link{lmm_animal}} (a
 \code{CmdStanMCMC} object), or a \code{posterior} draws object, or a matrix
 of draws, containing the variables \code{G} and \code{E}, or \code{P} for a
-phenotypic fit from \code{\link{lmm_multiCov}}.}
+phenotypic fit from \code{\link{lm_phen_cov}}.}
 
 \item{transform}{A \code{size_shape} object from \code{\link{size_shape}}.}
 }

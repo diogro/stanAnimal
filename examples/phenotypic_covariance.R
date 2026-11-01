@@ -1,7 +1,7 @@
 # Phenotypic covariance example (no pedigree)
 #
 # Real mouse morphometric data (35 log-transformed traits), bundled with the
-# package as ratones_morpho. lmm_multiCov() fits the phenotypic covariance
+# package as ratones_morpho. lm_phen_cov() fits the phenotypic covariance
 # matrix P after the fixed effects, so there is no relatedness and no G. Because
 # the distances are strongly integrated, the traits are reparametrized
 # with size_shape() and every draw is mapped back to the log-trait scale with
@@ -20,7 +20,7 @@ library(stanAnimal)
 # individual information (sex, age, generation, line). No network access needed.
 ratonesdf <- ratones_morpho
 
-# lmm_multiCov estimates the phenotypic covariance matrix P after fixed effects;
+# lm_phen_cov estimates the phenotypic covariance matrix P after fixed effects;
 # there is no relatedness, so no G or breeding values.
 all_traits = names(ratonesdf)[12:46]
 traits = all_traits[1:35]  # subset to keep the example small (50s on full matrix)
@@ -46,7 +46,7 @@ Y = ratones$Y
 X = ratones$X
 cat(nrow(Y), "individuals,", ncol(Y), "model traits,", ncol(X), "fixed effects\n")
 
-cov_fit = lmm_multiCov(Y, X, lkj_prior = 6, iter = 800, 
+cov_fit = lm_phen_cov(Y, X, lkj_prior = 6, iter = 800,
                        warmup = 400, cores = 4,  chains = 4)
 
 # Summaries and sampler diagnostics (model scale: size and shape axes)

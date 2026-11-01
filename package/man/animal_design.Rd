@@ -56,7 +56,7 @@ A list with
 }
 \description{
 Builds the \code{Y} and \code{X} arguments of \code{\link{lmm_animal}},
-\code{\link{lmm_multiCov}} and \code{\link{lmm_animal_gibbs}} from a formula
+\code{\link{lm_phen_cov}} and \code{\link{lmm_animal_gibbs}} from a formula
 and a data frame, so a model written the usual way (\code{y ~ sex + age}, or
 \code{cbind(x, y, z) ~ sex + age}) can be fitted without building the
 matrices by hand.
@@ -83,8 +83,8 @@ Random-effect terms such as \code{(1 | animal)} are ignored, so
 
   If the response has three or more traits and its first principal component
   explains at least 80\% of the variance, a warning suggests fitting size and
-  shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
-  reports that share.
+  shape scores instead (see \code{\link{size_shape}});
+  \code{\link{pc1_variance_share}} reports that share.
 }
 \examples{
 dat <- data.frame(trait = rnorm(6), x = rnorm(6),

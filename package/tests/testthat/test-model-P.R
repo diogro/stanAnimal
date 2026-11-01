@@ -1,7 +1,7 @@
 skip_if_no_cmdstan()
 
 fit_P <- function(sim, ...) {
-  lmm_multiCov(sim$Y, sim$X, iter = 1000, chains = 2, cores = 2, seed = 1,
+  lm_phen_cov(sim$Y, sim$X, iter = 1000, chains = 2, cores = 2, seed = 1,
                refresh = 0, show_messages = FALSE, ...)
 }
 
@@ -60,7 +60,7 @@ test_that("a custom model file is used", {
                          genetic = FALSE)
   f <- tempfile(fileext = ".stan")
   writeLines("parameters { real x; } model { x ~ normal(0, 1); }", f)
-  fit <- lmm_multiCov(sim$Y, sim$X, model_file = f, iter = 400, chains = 1,
+  fit <- lm_phen_cov(sim$Y, sim$X, model_file = f, iter = 400, chains = 1,
                       refresh = 0, show_messages = FALSE,
                       control = list(adapt_delta = 0.8))
   expect_equal(setdiff(fit$metadata()$stan_variables, "lp__"), "x")

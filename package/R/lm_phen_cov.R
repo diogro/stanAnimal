@@ -23,7 +23,7 @@
 #' Continuous predictors are centered and divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not centered or scaled. Standardized slopes have \code{normal(0, 1)} priors; the intercept contribution has a wider \code{normal(0, 2.5)} prior. Returned \code{beta} coefficients are backtransformed to original predictor and response units, including restoring the response mean to the intercept; \code{beta_scaled} draws are also available.
 #' @author Diogo Melo
 #' @export
-lmm_multiCov = function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2),
+lm_phen_cov <- function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2),
                         chains = 4, cores = chains, control = list(adapt_delta = 0.99),
                         cmd_stan = TRUE, model_file = NULL, ...){
   lkj_prior <- .check_positive(lkj_prior, "lkj_prior")

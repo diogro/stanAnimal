@@ -1,5 +1,16 @@
 # stanAnimal 0.4.0
 
+## API naming
+
+* `pc_dominance()` is now `pc1_variance_share()`, which names the first-PC
+  variance proportion without suggesting a genetic dominance effect.
+* `lmm_multiCov()` is now `lm_phen_cov()`: the phenotypic covariance model has
+  no random effects, so it is a linear model rather than a mixed model.
+* `animal_draws()` is now `rename_beta()`, which says what it does: it takes the
+  draws from a fit and renames the `beta` variables after the columns of `X`.
+  The old name sounded like the way to get draws at all, which is `fit$draws()`.
+  These are direct renames with no deprecated aliases.
+
 ## New features
 
 * `ratones_morpho` and `ratones_pedigree` ship with the package: 35 cranial
@@ -18,11 +29,6 @@
   order. `animal_design()` uses it when it is given `pedigree`.
 
 ## Changes
-
-* `animal_draws()` is now `rename_beta()`, which says what it does: it takes the
-  draws from a fit and renames the `beta` variables after the columns of `X`.
-  The old name sounded like the way to get draws at all, which is `fit$draws()`.
-  This is a rename, not a deprecation: `animal_draws()` is gone.
 
 * `cmdstanr` and `rstan` are suggested rather than imported, so the package
   installs without a Stan engine. A fit uses `cmdstanr` when it is available,

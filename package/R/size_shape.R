@@ -1,4 +1,4 @@
-#' Share of variance in the leading principal component
+#' Share of variance explained by the first principal component
 #'
 #' Diagnostic for the size and shape reparametrization: when a single component
 #' dominates, the traits are mostly one size gradient plus noise, and fitting
@@ -20,10 +20,10 @@
 #' correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
 #'                     b = 2 * gradient + rnorm(50, sd = 0.2),
 #'                     c = -gradient + rnorm(50, sd = 0.2))
-#' pc_dominance(correlated)                    # close to 1
-#' pc_dominance(matrix(rnorm(150), 50, 3))     # close to 1 / 3
+#' pc1_variance_share(correlated)                 # close to 1
+#' pc1_variance_share(matrix(rnorm(150), 50, 3))  # close to 1 / 3
 #' @export
-pc_dominance <- function(Y) {
+pc1_variance_share <- function(Y) {
   Y <- as.matrix(Y)
   if (!is.numeric(Y) || any(!is.finite(Y)))
     stop("Y must be a finite numeric matrix of traits.", call. = FALSE)
@@ -33,7 +33,7 @@ pc_dominance <- function(Y) {
   if (k == 1L)
     return(1)
   if (nrow(Y) < 3L)
-    stop("pc_dominance needs at least three individuals.", call. = FALSE)
+    stop("pc1_variance_share needs at least three individuals.", call. = FALSE)
   if (any(apply(Y, 2L, stats::sd) == 0))
     stop("every trait in Y must vary.", call. = FALSE)
   eigenvalues <- eigen(stats::cor(Y), symmetric = TRUE, only.values = TRUE)$values
@@ -150,7 +150,7 @@ print.size_shape <- function(x, ...) {
 #' @param fit A fit returned by \code{\link{lmm_animal}} (a
 #'   \code{CmdStanMCMC} object), or a \code{posterior} draws object, or a matrix
 #'   of draws, containing the variables \code{G} and \code{E}, or \code{P} for a
-#'   phenotypic fit from \code{\link{lmm_multiCov}}.
+#'   phenotypic fit from \code{\link{lm_phen_cov}}.
 #' @param transform A \code{size_shape} object from \code{\link{size_shape}}.
 #' @return A list of class \code{size_shape_draws} holding one element per
 #'   quantity, in the same layout as \code{\link{lmm_animal_gibbs}}: traits
@@ -215,7 +215,7 @@ back_transform <- function(fit, transform) {
   in_p <- .matrix_variable_names("P", k_model)
   has_components <- all(in_g %in% colnames(m)) && all(in_e %in% colnames(m))
   if (!has_components && !all(in_p %in% colnames(m)))
-    stop("draws must contain G and E (lmm_animal) or P (lmm_multiCov) for ",
+    stop("draws must contain G and E (lmm_animal) or P (lm_phen_cov) for ",
          k_model, " model traits, as named by the model functions for the ",
          "size_shape scores.", call. = FALSE)
 

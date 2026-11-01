@@ -137,7 +137,7 @@ f <- reformulate(c("age", "sex"),
 design <- animal_design(f, data = dat)
 ```
 
-The result feeds `lmm_animal()`, `lmm_multiCov()` and `lmm_animal_gibbs()` alike.
+The result feeds `lmm_animal()`, `lm_phen_cov()` and `lmm_animal_gibbs()` alike.
 
 `animal_design()` can also build `A`, either from a pedigree (through `makeA()`) or from a genotype matrix (through `genomic_relationship()`), as long as `data` has the individual IDs as row names. `A` is restricted to the rows kept in `Y`, so ancestors and individuals without records are handled:
 
@@ -160,7 +160,7 @@ fit <- lmm_animal(design$Y, design$X, design$A)
 Check the share of variance in the first principal component first:
 
 ```r
-pc_dominance(log_traits)   # 1 / n_traits means no dominant gradient; > 0.8 means fit size and shape
+pc1_variance_share(log_traits)   # 1 / n_traits means no dominant gradient; > 0.8 means fit size and shape
 ```
 
 `size_shape()` rewrites the traits as log size plus orthogonal shape axes, and `back_transform()` maps the posterior draws back to the trait scale:
@@ -187,7 +187,7 @@ apply(post$h2, 1, mean)                       # posterior mean h2 per trait
 
 The LKJ prior is not invariant under this change of traits: it acts on correlations between size and shape, which are expected to be small because the shape axes are principal components, so a larger `lkj_prior` than for the same traits fitted raw is often reasonable — see `?size_shape`.
 
-Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale. `back_transform()` also accepts a `lmm_multiCov()` fit, in which case it returns `P`, `corrP` and `sigma_P`.
+Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale. `back_transform()` also accepts an `lm_phen_cov()` fit, in which case it returns `P`, `corrP` and `sigma_P`.
 
 ## Pedigree relationship matrix
 
@@ -215,10 +215,10 @@ Markers with low minor allele frequency (`maf`), too much missing data (`max_mis
 
 ## Phenotypic covariance only (P)
 
-With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`. The likelihood is a single whitened triangular solve, $O(NK^2 + K^3)$, so it also scales to dozens of traits:
+With no pedigree or genomic data, `lm_phen_cov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`. The likelihood is a single whitened triangular solve, $O(NK^2 + K^3)$, so it also scales to dozens of traits:
 
 ```r
-fit <- lmm_multiCov(Y, X, lkj_prior = 2)
+fit <- lm_phen_cov(Y, X, lkj_prior = 2)
 fit$summary("P")
 ```
 
@@ -272,5 +272,4 @@ rename_beta(fit, "beta")
 
 - The models assume one record per individual.
 - Under development: the API may still change.
-
 

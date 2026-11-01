@@ -71,7 +71,7 @@ data(ratones_morpho)
 dim(ratones_morpho)
 table(ratones_morpho$selection)
 traits <- names(ratones_morpho)[12:46]
-pc_dominance(log(as.matrix(ratones_morpho[, traits])))
+pc1_variance_share(log(as.matrix(ratones_morpho[, traits])))
 }
 \references{
 Penna, A., Melo, D., Bernardi, S., Oyarzabal, M. I., & Marroig,

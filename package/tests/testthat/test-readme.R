@@ -34,11 +34,11 @@ readme_context <- function() {
   short_animal <- function(...)
     stanAnimal::lmm_animal(..., iter = 200, warmup = 100, chains = 2, cores = 2,
                            refresh = 0, show_messages = FALSE)
-  short_multiCov <- function(...)
-    stanAnimal::lmm_multiCov(..., iter = 200, warmup = 100, chains = 2, cores = 2,
+  short_phen_cov <- function(...)
+    stanAnimal::lm_phen_cov(..., iter = 200, warmup = 100, chains = 2, cores = 2,
                              refresh = 0, show_messages = FALSE)
   assign("lmm_animal", short_animal, envir = env)
-  assign("lmm_multiCov", short_multiCov, envir = env)
+  assign("lm_phen_cov", short_phen_cov, envir = env)
 
   local({
     set.seed(42)
