@@ -136,13 +136,11 @@ rbind(traits = c(elapsed = time_traits[["elapsed"]],
       size_shape = c(elapsed = time_size_shape[["elapsed"]],
                      sampling = fit_ss$time()$total))
 
-# G on the measured trait scale, from both fits
+# G on the measured trait scale, from both fits. back_transform() returns G as a
+# draws by traits by traits array, already named after the traits
 post_ss <- back_transform(fit_ss, ss)
-g_names <- sprintf("G[%d,%d]", rep(seq_along(traits), length(traits)),
-                   rep(seq_along(traits), each = length(traits)))
 G_traits <- post_mean("G")
-G_size_shape <- matrix(colMeans(as.matrix(post_ss)[, g_names]), length(traits),
-                       dimnames = list(traits, traits))
+G_size_shape <- apply(post_ss$G, c(2, 3), mean)
 round(G_traits, 4)
 round(G_size_shape, 4)
 # Largest difference between the two estimates, relative to the largest element
