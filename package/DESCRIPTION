@@ -9,7 +9,7 @@ License: GPL (>=3)
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 3.5.0)
+    R (>= 4.0.0)
 Imports: 
     rstan (>= 2.18.1),
     cmdstanr,
