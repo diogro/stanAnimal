@@ -19,7 +19,7 @@ lmm_multiCov(
 )
 }
 \arguments{
-\item{Y}{Numeric response vector or matrix, with individuals in rows.}
+\item{Y}{Numeric response vector or matrix, with individuals in rows. Every trait must vary: constant traits cannot be standardized and are an error.}
 
 \item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
 

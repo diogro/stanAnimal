@@ -26,6 +26,21 @@ test_that("lmm_animal validates A and flags", {
   expect_error(lmm_animal(Y, X, A, parametrization = "bad"), "should be one of")
 })
 
+test_that("constant traits are rejected before the model is fitted", {
+  # univariate: a constant response has no standard deviation to divide by
+  expect_error(lmm_animal(rep(5, nrow(Y)), X, A),
+               "every trait in Y must vary")
+  # multivariate: one constant column is enough
+  expect_error(lmm_animal(cbind(Y, flat = 1), X, A),
+               "every trait in Y must vary: flat")
+  # partially named and unnamed responses still say which column it was
+  expect_error(lmm_animal(cbind(Y, 1), X, A), "column 4")
+  expect_error(lmm_animal(cbind(unname(Y[, 1]), 1), X, A), "column 2")
+  # the phenotypic model shares the check, and so does the rstan path
+  expect_error(lmm_multiCov(cbind(Y, flat = 1), X), "flat")
+  expect_error(lmm_animal(cbind(Y, flat = 1), X, A, cmd_stan = FALSE), "flat")
+})
+
 test_that("lmm_multiCov validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
   expect_error(lmm_multiCov(Yna, X), "Y must contain only finite")

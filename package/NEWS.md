@@ -36,6 +36,11 @@
 
 ## Bug fixes
 
+* A response trait that does not vary is now rejected with a clear message
+  before the model is fitted. The univariate and multivariate Stan models
+  standardize the responses by their standard deviation, so a constant trait
+  used to fail inside Stan, after compiling and starting the chains.
+
 * The size and shape example in the README built its response with a fixed
   number of shape axes, so `back_transform()` failed whenever the number of
   traits was not four.

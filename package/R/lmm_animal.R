@@ -1,7 +1,7 @@
 #' Fit linear mixed animal model
 #' 
 #' Fits a univariate or multivariate linear mixed animal model using a known relatedness matrix
-#' @param Y response variable, univariate or multivariate
+#' @param Y response variable, univariate or multivariate. Every trait must vary: constant traits cannot be standardized and are an error.
 #' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-definite relationship matrix matching the rows of Y. A matrix that is only positive semidefinite (duplicated individuals, for example) is rejected; set \code{blend_A = TRUE} to regularize it. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics.
@@ -139,6 +139,17 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
     stop("Y and X must have the same number of rows, and X must have columns.")
   if (qr(X)$rank < p)
     stop("X must have full column rank.")
+  # The models standardize the responses by their standard deviation, so a
+  # constant trait would divide by zero inside Stan
+  spread <- apply(Y, 2L, stats::sd)
+  constant <- spread <= 0
+  if (any(constant)) {
+    labels <- colnames(Y) %||% rep("", ncol(Y))
+    blank <- is.na(labels) | !nzchar(labels)
+    labels[blank] <- paste("column", which(blank))
+    stop("every trait in Y must vary, so that it can be standardized: ",
+         paste(labels[constant], collapse = ", "), call. = FALSE)
+  }
   list(Y = Y, X = X)
 }
 
