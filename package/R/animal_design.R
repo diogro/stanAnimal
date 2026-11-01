@@ -15,10 +15,10 @@
 #' @param na.action How to handle missing values, passed to
 #'   \code{\link[stats]{model.frame}}; the default drops incomplete rows.
 #' @param pedigree Optional pedigree, used to compute the additive relationship
-#'   matrix \code{A} (needs the \pkg{nadiv} package). A data frame whose first
-#'   three columns are the individual, its sire and its dam, with \code{0},
-#'   \code{NA} or \code{""} for unknown parents. The pedigree may contain
-#'   ancestors that are not in \code{data}.
+#'   matrix \code{A} with \code{\link{makeA}}. A data frame
+#'   whose first three columns are the individual, its sire and its dam, with
+#'   \code{0}, \code{NA} or \code{""} for unknown parents. The pedigree may
+#'   contain ancestors that are not in \code{data}.
 #' @param genotypes Optional genotype matrix, used to compute a genomic
 #'   relationship matrix (see \code{\link{genomic_relationship}}): individuals
 #'   in rows, with their IDs as row names, and biallelic markers in columns,
@@ -57,8 +57,8 @@
 #'   explains at least 80\% of the variance, a warning suggests fitting size and
 #'   shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
 #'   reports that share.
-#' @seealso \code{\link{lmm_animal}}, \code{\link{genomic_relationship}},
-#'   \code{\link{animal_draws}}
+#' @seealso \code{\link{lmm_animal}}, \code{\link{makeA}},
+#'   \code{\link{genomic_relationship}}, \code{\link{animal_draws}}
 #' @examples
 #' dat <- data.frame(trait = rnorm(6), x = rnorm(6),
 #'                   sex = rep(c(0, 1), each = 3), id = 1:6)
@@ -71,12 +71,10 @@
 #' animal_design(trait ~ sex + (1 | id), dat)
 #'
 #' # relatedness from a pedigree (first three columns: id, sire, dam)
-#' if (requireNamespace("nadiv", quietly = TRUE)) {
-#'   ped <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
-#'                     dam = c(0, 0, 2, 2, 3, 5))
-#'   design <- animal_design(trait ~ sex, dat, pedigree = ped)
-#'   round(design$A, 2)
-#' }
+#' ped <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
+#'                   dam = c(0, 0, 2, 2, 3, 5))
+#' design <- animal_design(trait ~ sex, dat, pedigree = ped)
+#' round(design$A, 2)
 #'
 #' # relatedness from genotypes (individuals in rows, markers in columns)
 #' M <- matrix(rbinom(6 * 40, 2, 0.3), 6,
@@ -144,7 +142,7 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
       stop("with pedigree or genotypes, the rows of data must be named with ",
            "the individual IDs.", call. = FALSE)
     if (!is.null(pedigree)) {
-      A <- .pedigree_relationship(pedigree)
+      A <- makeA(pedigree)
       source <- "pedigree"
     } else {
       A <- genomic_relationship(genotypes, ...)
@@ -159,30 +157,6 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
   structure(out,
             individuals = individuals,
             na.action = attr(frame, "na.action"))
-}
-
-# Additive relationship matrix from a pedigree, via nadiv.
-.pedigree_relationship <- function(pedigree) {
-  if (!requireNamespace("nadiv", quietly = TRUE))
-    stop("pedigree needs the nadiv package: install.packages(\"nadiv\").",
-         call. = FALSE)
-  ped <- as.data.frame(pedigree, stringsAsFactors = FALSE)
-  if (ncol(ped) < 3L)
-    stop("pedigree must have at least three columns: individual, sire and dam.",
-         call. = FALSE)
-  ped <- ped[, 1:3, drop = FALSE]
-  names(ped) <- c("id", "sire", "dam")
-  ped[] <- lapply(ped, function(x) if (is.factor(x)) as.character(x) else x)
-  if (anyDuplicated(ped$id))
-    stop("pedigree has duplicated individuals.", call. = FALSE)
-  # unknown parents can be coded as 0, "" or NA; prepPed expects NA
-  for (parent in c("sire", "dam")) {
-    x <- ped[[parent]]
-    unknown <- if (is.numeric(x)) x == 0 else x %in% c("", "0")
-    x[unknown] <- NA
-    ped[[parent]] <- x
-  }
-  as.matrix(nadiv::makeA(nadiv::prepPed(ped)))
 }
 
 # Keeps the individuals of Y, in the order of Y, from a named relationship

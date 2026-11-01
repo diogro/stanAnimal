@@ -13,12 +13,9 @@ pak::pkg_install("stan-dev/cmdstanr")
 cmdstanr::install_cmdstan()
 install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 pak::pkg_install("diogro/stanAnimal/package")
-
-# only needed to build A from a pedigree (see below); it needs R 4.2.0
-install.packages("nadiv")
 ```
 
-Requires R 4.0.0 or later. `nadiv` is a suggested dependency rather than an imported one: it is only used by `animal_design()` when it builds `A` from a pedigree, it compiles, and it requires a newer R than the package itself, so it is installed separately.
+Requires R 4.0.0 or later.
 
 # Example data
 
@@ -41,7 +38,7 @@ fit <- lmm_animal(design$Y, design$X, design$A)
 fit$summary(c("h2", "corrG"))
 ```
 
-The pedigree path needs the `nadiv` package. `examples/ratones.R` fits this model end to end and plots the results.
+`examples/ratones.R` fits this model end to end and plots the results.
 
 # Usage
 
@@ -51,7 +48,7 @@ library(stanAnimal)
 # Y: trait matrix (individuals in rows), one record per individual
 # X: fixed effects model matrix (full column rank, include an intercept column)
 # A: relationship matrix, same individual order as Y and X
-A <- as.matrix(nadiv::makeA(pedigree))
+A <- makeA(pedigree)                   # or genomic_relationship(genotypes)
 fit <- lmm_animal(Y, X, A)
 ```
 
@@ -88,12 +85,12 @@ design <- animal_design(f, data = dat)
 
 The result feeds `lmm_animal()`, `lmm_multiCov()` and `lmm_animal_gibbs()` alike.
 
-`animal_design()` can also build `A`, either from a pedigree (needs `nadiv`) or from a genotype matrix (through `genomic_relationship()`), as long as `data` has the individual IDs as row names. `A` is restricted to the rows kept in `Y`, so ancestors and individuals without records are handled:
+`animal_design()` can also build `A`, either from a pedigree (through `makeA()`) or from a genotype matrix (through `genomic_relationship()`), as long as `data` has the individual IDs as row names. `A` is restricted to the rows kept in `Y`, so ancestors and individuals without records are handled:
 
 ```r
 rownames(dat) <- dat$id
 
-# from a pedigree (first three columns: id, sire, dam); needs nadiv
+# from a pedigree (first three columns: id, sire, dam)
 design <- animal_design(cbind(t1, t2) ~ age + sex, dat, pedigree = ped)
 fit <- lmm_animal(design$Y, design$X, design$A)
 
@@ -101,6 +98,18 @@ fit <- lmm_animal(design$Y, design$X, design$A)
 design <- animal_design(cbind(t1, t2) ~ age + sex, dat, genotypes = M, blend = 0.01)
 fit <- lmm_animal(design$Y, design$X, design$A)
 ```
+
+## Pedigree relationship matrix
+
+`makeA()` turns a pedigree into the additive relationship matrix, using the tabular method, with parents allowed in any order and unknown parents coded `0`, `NA` or `""`:
+
+```r
+# first three columns: individual, sire, dam
+A <- makeA(pedigree)
+fit <- lmm_animal(Y, X, A)
+```
+
+Inbreeding is accounted for, so a pedigree with matings between relatives gives diagonal values above one. A parent that is not one of the pedigree's individuals is added as a founder, with a warning, rather than silently dropping the relationship; a pedigree where an individual is its own ancestor is an error.
 
 ## Genomic relationship matrix
 

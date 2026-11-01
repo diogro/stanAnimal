@@ -10,8 +10,7 @@
 #   Rscript examples/ratones.R
 
 # Install (if needed) and load all dependencies in one go
-pkgs <- c("rstan", "nadiv", "bayesplot", "posterior", "ggplot2", "patchwork",
-          "evolqg")
+pkgs <- c("rstan", "bayesplot", "posterior", "ggplot2", "patchwork", "evolqg")
 if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
 pak::pkg_install(pkgs, upgrade = FALSE)
 invisible(lapply(pkgs, library, character.only = TRUE))

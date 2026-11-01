@@ -90,7 +90,6 @@ test_that("every example in the README runs", {
   if (is.null(path))
     skip("README.md is not available outside a checkout of the repository")
   skip_if_no_cmdstan()
-  skip_if_not_installed("nadiv")
   skip_if_not_installed("bayesplot")
   skip_if_not_installed("posterior")
 

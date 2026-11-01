@@ -7,7 +7,7 @@
 #   Rscript examples/multivariate.R
 
 # Install (if needed) and load all dependencies in one go
-pkgs <- c("mvtnorm", "rstan", "nadiv", "evolqg", "corrplot", "patchwork", "bayesplot",
+pkgs <- c("mvtnorm", "rstan", "evolqg", "corrplot", "patchwork", "bayesplot",
           "cran/pedtools")  # pedtools is no longer on CRAN -> install from GitHub
 if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
 pak::pkg_install(pkgs, upgrade = FALSE)
@@ -24,9 +24,8 @@ library(stanAnimal)
 
 ## Simulation
 ped = randomPed(1500, 50, seed = 2)
-ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
-ped = prepPed(ped)
-A <- as.matrix(nadiv::makeA(ped))
+ped = data.frame(id = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
+A <- makeA(ped)
 L_A = chol(A)
 
 n_traits = 5

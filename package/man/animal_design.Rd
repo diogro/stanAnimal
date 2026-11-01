@@ -26,10 +26,10 @@ individual IDs.}
 \code{\link[stats]{model.frame}}; the default drops incomplete rows.}
 
 \item{pedigree}{Optional pedigree, used to compute the additive relationship
-matrix \code{A} (needs the \pkg{nadiv} package). A data frame whose first
-three columns are the individual, its sire and its dam, with \code{0},
-\code{NA} or \code{""} for unknown parents. The pedigree may contain
-ancestors that are not in \code{data}.}
+matrix \code{A} with \code{\link{makeA}}. A data frame
+whose first three columns are the individual, its sire and its dam, with
+\code{0}, \code{NA} or \code{""} for unknown parents. The pedigree may
+contain ancestors that are not in \code{data}.}
 
 \item{genotypes}{Optional genotype matrix, used to compute a genomic
 relationship matrix (see \code{\link{genomic_relationship}}): individuals
@@ -94,12 +94,10 @@ design$X
 animal_design(trait ~ sex + (1 | id), dat)
 
 # relatedness from a pedigree (first three columns: id, sire, dam)
-if (requireNamespace("nadiv", quietly = TRUE)) {
-  ped <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
-                    dam = c(0, 0, 2, 2, 3, 5))
-  design <- animal_design(trait ~ sex, dat, pedigree = ped)
-  round(design$A, 2)
-}
+ped <- data.frame(id = 1:6, sire = c(0, 0, 1, 1, 4, 4),
+                  dam = c(0, 0, 2, 2, 3, 5))
+design <- animal_design(trait ~ sex, dat, pedigree = ped)
+round(design$A, 2)
 
 # relatedness from genotypes (individuals in rows, markers in columns)
 M <- matrix(rbinom(6 * 40, 2, 0.3), 6,
@@ -108,6 +106,6 @@ design <- animal_design(trait ~ sex, dat, genotypes = M, blend = 0.01)
 dim(design$A)
 }
 \seealso{
-\code{\link{lmm_animal}}, \code{\link{genomic_relationship}},
-  \code{\link{animal_draws}}
+\code{\link{lmm_animal}}, \code{\link{makeA}},
+  \code{\link{genomic_relationship}}, \code{\link{animal_draws}}
 }

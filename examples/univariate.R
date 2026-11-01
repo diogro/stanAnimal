@@ -9,7 +9,7 @@
 #   Rscript examples/univariate.R
 
 # Install (if needed) and load all dependencies in one go
-pkgs <- c("rstan", "nadiv", "bayesplot", "ggplot2",
+pkgs <- c("rstan", "bayesplot", "ggplot2",
           "cran/pedtools")  # pedtools is no longer on CRAN -> install from GitHub
 if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
 pak::pkg_install(pkgs, upgrade = FALSE)
@@ -26,9 +26,8 @@ library(stanAnimal)
 
 ## Simulation
 ped = randomPed(1500, 50, seed = 2)
-ped = data.frame(ID = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
-ped = prepPed(ped)
-A <- as.matrix(nadiv::makeA(ped))
+ped = data.frame(id = ped$ID, sire = ped$FIDX, dam = ped$MIDX)
+A <- makeA(ped)
 L_A = chol(A)
 
 n = nrow(A)

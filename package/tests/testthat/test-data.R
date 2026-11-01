@@ -24,7 +24,6 @@ test_that("ratones_pedigree has the documented shape and covers the mice", {
 })
 
 test_that("the bundled pedigree builds a usable relationship matrix", {
-  skip_if_not_installed("nadiv")
   dat <- ratones_morpho[c(1:20, 300:329), ]
   dat$trait <- dat[["IS_PM"]]
   d <- animal_design(trait ~ SEX + AGE, dat, pedigree = ratones_pedigree)

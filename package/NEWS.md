@@ -13,9 +13,16 @@
 * `to_draws_list()` converts the arrays returned by `back_transform()` into one
   `posterior::draws_matrix` per quantity, for the `posterior` and `bayesplot`
   tools.
+* `makeA()` builds the additive relationship matrix from a pedigree with the
+  tabular method, accounting for inbreeding and accepting the pedigree in any
+  order. `animal_design()` uses it when it is given `pedigree`.
 
 ## Changes
 
+* The package no longer depends on `nadiv`, which was only used to build `A`
+  from a pedigree: `makeA()` replaces it, so the pedigree path no longer needs a
+  compiled suggested package, and it works on the same R versions as the rest of
+  the package.
 * `back_transform()` now returns a list of class `size_shape_draws` instead of a
   single `draws_matrix`: `G`, `E`, `P`, `corrG` and `corrP` are
   trait by trait by draw arrays and `h2` is a trait by draw matrix, the same
