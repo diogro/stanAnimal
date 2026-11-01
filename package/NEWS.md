@@ -1,4 +1,14 @@
-# stanAnimal 0.5.0 (release candidate)
+# stanAnimal 0.5.0.9000
+
+## Breaking changes
+
+## New features
+
+## Improvements
+
+## Bug fixes
+
+# stanAnimal 0.5.0
 
 ## Breaking changes
 
