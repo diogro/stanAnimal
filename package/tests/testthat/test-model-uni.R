@@ -21,7 +21,7 @@ check_uni <- function(fit) {
   expect_true(all(h2 > 0 & h2 < 1))
   expect_lt(abs(mean(h2) - 0.5), 0.25)
   expect_true(all(c("beta[Int]", "beta[x]", "beta[z]") %in%
-                    posterior::variables(animal_draws(fit, "beta"))))
+                    posterior::variables(rename_beta(fit, "beta"))))
 }
 
 test_that("variance parametrization recovers beta and h2", {

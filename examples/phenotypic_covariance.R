@@ -55,7 +55,7 @@ cov_fit$diagnostic_summary()
 
 # Fixed effects, named after the columns of X (model scale: one coefficient per
 # size or shape trait)
-beta_draws = animal_draws(cov_fit, "beta")
+beta_draws = rename_beta(cov_fit, "beta")
 posterior::summarise_draws(beta_draws)
 
 # Back-transform every draw to the log-trait scale. The result is a list of

@@ -72,7 +72,7 @@ stan_model$summary(c("h2", "G", "E", "corrG"),
 stan_model$diagnostic_summary()
 
 # Fixed effects are named after the columns of X: beta[trait, column]
-beta_draws = animal_draws(stan_model, "beta")
+beta_draws = rename_beta(stan_model, "beta")
 posterior::summarise_draws(beta_draws)
 
 # Residual correlations are not a model output; derive them from the draws

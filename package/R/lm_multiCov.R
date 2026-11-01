@@ -15,7 +15,7 @@
 #' @param cmd_stan Logical, use cmdstanr. If FALSE, uses rstan. Both engines are suggested packages: when cmdstanr is not installed the fit falls back to rstan with a warning, and when neither is installed the fit errors.
 #' @param model_file Optional path to a custom Stan file replacing the default model.
 #' @param ... additional parameters for stan sampling.
-#' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{animal_draws}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
+#' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{rename_beta}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
 #' @details The model estimates \code{P} as scales times an LKJ-distributed correlation matrix, with half-normal priors on the scales of the standardized responses. Returned quantities (original response scale) are \code{P}, \code{corrP}, \code{sigma_P} and the fixed effects \code{beta[trait,j]}.
 #'
 #' The likelihood is computed by whitening the residuals with the Cholesky factor of \code{P} in a single triangular solve, at \code{O(N K^2 + K^3)} per evaluation rather than a per-individual loop, so the model scales to dozens of traits.

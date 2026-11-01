@@ -19,6 +19,11 @@
 
 ## Changes
 
+* `animal_draws()` is now `rename_beta()`, which says what it does: it takes the
+  draws from a fit and renames the `beta` variables after the columns of `X`.
+  The old name sounded like the way to get draws at all, which is `fit$draws()`.
+  This is a rename, not a deprecation: `animal_draws()` is gone.
+
 * `cmdstanr` and `rstan` are suggested rather than imported, so the package
   installs without a Stan engine. A fit uses `cmdstanr` when it is available,
   falls back to `rstan` with a warning when it is not, and stops with the

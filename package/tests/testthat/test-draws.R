@@ -8,28 +8,28 @@ test_that(".beta_names uses trait indices only for several traits", {
   expect_equal(nm$new, c("beta[1,Int]", "beta[2,Int]", "beta[1,x]", "beta[2,x]"))
 })
 
-test_that("animal_draws renames beta and leaves other variables alone", {
+test_that("rename_beta renames beta and leaves other variables alone", {
   skip_if_not_installed("posterior")
   draws <- posterior::as_draws_array(array(
     stats::rnorm(10 * 2 * 3), c(10, 2, 3),
     dimnames = list(NULL, NULL, c("beta[1]", "beta[2]", "h2"))))
   fit <- structure(list(draws = function(variables = NULL, ...) draws),
                    x_names = c("Int", "x"))
-  out <- animal_draws(fit)
+  out <- rename_beta(fit)
   expect_equal(posterior::variables(out), c("beta[Int]", "beta[x]", "h2"))
   attr(fit, "x_names") <- NULL
-  expect_equal(posterior::variables(animal_draws(fit)),
+  expect_equal(posterior::variables(rename_beta(fit)),
                c("beta[1]", "beta[2]", "h2"))
 })
 
-test_that("animal_draws renames multi-trait beta", {
+test_that("rename_beta renames multi-trait beta", {
   skip_if_not_installed("posterior")
   vars <- c("beta[1,1]", "beta[2,1]", "beta[1,2]", "beta[2,2]")
   draws <- posterior::as_draws_array(array(
     stats::rnorm(5 * 1 * 4), c(5, 1, 4), dimnames = list(NULL, NULL, vars)))
   fit <- structure(list(draws = function(variables = NULL, ...) draws),
                    x_names = c("Int", "x"))
-  expect_equal(posterior::variables(animal_draws(fit)),
+  expect_equal(posterior::variables(rename_beta(fit)),
                c("beta[1,Int]", "beta[2,Int]", "beta[1,x]", "beta[2,x]"))
 })
 

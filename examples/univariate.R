@@ -67,8 +67,8 @@ fit_var$summary(c("h2", "sigma_G", "sigma_E", "beta"))
 fit_h2$summary(c("h2", "sigma_G", "sigma_E", "beta"))
 
 # Fixed effects are named after the columns of X
-beta_draws_var = animal_draws(fit_var, "beta")
-beta_draws_h2 = animal_draws(fit_h2, "beta")
+beta_draws_var = rename_beta(fit_var, "beta")
+beta_draws_h2 = rename_beta(fit_h2, "beta")
 posterior::summarise_draws(beta_draws_var)
 posterior::summarise_draws(beta_draws_h2)
 

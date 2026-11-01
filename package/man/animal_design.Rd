@@ -111,5 +111,5 @@ dim(design$A)
 }
 \seealso{
 \code{\link{lmm_animal}}, \code{\link{makeA}},
-  \code{\link{genomic_relationship}}, \code{\link{animal_draws}}
+  \code{\link{genomic_relationship}}, \code{\link{rename_beta}}
 }

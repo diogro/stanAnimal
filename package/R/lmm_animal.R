@@ -42,7 +42,7 @@
 #' @param blend_A If TRUE, replace A with 0.99 * A + 0.01 * I before fitting, making singular A positive definite.
 #' @param residual_structure Residual covariance for multivariate fits: "unstructured" (default, full covariance between traits) or "diagonal". With a diagonal residual, environmental covariances between traits are absorbed into the genetic covariance and inflate heritability, so "unstructured" is recommended when estimating G.
 #' @param ... additional parameters for stan sampling
-#' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{animal_draws}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
+#' @return With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr: use \code{fit$draws()} (a \code{posterior} draws array) and \code{fit$summary()}, and pass these, or the fit itself, to bayesplot (e.g. \code{bayesplot::mcmc_trace(fit$draws("h2"))}, \code{bayesplot::nuts_params(fit)}). Fixed effects are \code{beta[j]} (univariate) or \code{beta[trait,j]} for column \code{j} of \code{X}; use \code{\link{rename_beta}} to get draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object whose \code{beta} draws are named after the columns of \code{X}.
 #' @details The models estimate the additive genetic and residual standard deviations (\code{sigma_G}, \code{sigma_E}) directly, with half-normal priors on the standardized response scale, and report \code{h2} as a derived quantity; there is no prior on h2 itself. The multivariate model estimates the additive genetic covariance matrix \code{G} and the residual covariance \code{E} directly, each as scales times an LKJ-distributed correlation matrix (\code{lkj_prior}), with half-normal priors on the scales of the standardized responses. Breeding values are marginalized using the eigendecomposition of \code{A}, so the likelihood needs no per-individual random effects; only the eigenvalues of \code{A} are used, which is why a singular \code{A} can be fitted once it is regularized with \code{blend_A = TRUE}. Returned quantities (original response scale) are \code{G}, \code{E}, \code{P = G + E}, \code{corrG}, \code{sigma_G}, \code{sigma_E} and \code{h2 = diag(G) / diag(P)}.
 #'
 #' The per-individual likelihoods are whitened by the residual Cholesky factor and rotated into a single eigendecomposition of \code{E^{-1/2} G E^{-1/2}}, so each evaluation costs \code{O(N K^2 + K^3)} rather than \code{O(N K^3)}. This lets the multivariate model scale to dozens of traits without a Cholesky factorization per individual. When the eigenvalues of that matrix are nearly coincident (for example at initialization, or when \code{G} is roughly proportional to \code{E}) the model automatically falls back to a per-individual Cholesky evaluation, which has a well-behaved gradient.
@@ -266,19 +266,21 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
   fit
 }
 
-#' Posterior draws with named fixed effects
+#' Posterior draws with the fixed effects named
 #'
-#' Returns draws from a \code{lmm_animal} fit made with \code{cmd_stan = TRUE},
-#' with the \code{beta} variables named after the columns of \code{X}
-#' (\code{beta[name]} for one trait, \code{beta[trait,name]} for several).
-#' If \code{X} had no column names the draws are returned unchanged.
+#' Extracts draws from a \code{lmm_animal} fit made with \code{cmd_stan = TRUE},
+#' renaming the \code{beta} variables after the columns of \code{X}: named
+#' \code{beta[name]} for one trait and \code{beta[trait,name]} for several,
+#' instead of \code{beta[j]} and \code{beta[k,j]}. Every other variable is
+#' returned unchanged, and if \code{X} had no column names the draws are
+#' returned as \code{fit$draws()} gives them.
 #' @param fit A \code{CmdStanMCMC} object returned by \code{lmm_animal}.
 #' @param variables Optional character vector of variables to extract, using
 #'   Stan's names (e.g. \code{"beta"}, \code{"h2"}). Default is all variables.
 #' @param ... Further arguments passed to \code{fit$draws()}, e.g. \code{format}.
 #' @return A \code{posterior} draws object, usable with bayesplot.
 #' @export
-animal_draws <- function(fit, variables = NULL, ...) {
+rename_beta <- function(fit, variables = NULL, ...) {
   draws <- fit$draws(variables = variables, ...)
   x_names <- attr(fit, "x_names")
   if (is.null(x_names))

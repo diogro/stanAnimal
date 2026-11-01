@@ -45,14 +45,14 @@ test_that("a single trait works", {
   expect_clean_fit(fit)
   expect_lt(abs(fit$summary("P", "mean")$mean - 1.5), 0.4)
   expect_true(all(c("beta[Int]", "beta[x]", "beta[z]") %in%
-                    posterior::variables(animal_draws(fit, "beta"))))
+                    posterior::variables(rename_beta(fit, "beta"))))
 })
 
-test_that("animal_draws names multi-trait beta", {
+test_that("rename_beta names multi-trait beta", {
   sim <- simulate_animal(n_fam = 1, size = 100, E = G3, seed = 44,
                          genetic = FALSE)
   fit <- suppressWarnings(fit_P(sim))
-  expect_true("beta[2,x]" %in% posterior::variables(animal_draws(fit, "beta")))
+  expect_true("beta[2,x]" %in% posterior::variables(rename_beta(fit, "beta")))
 })
 
 test_that("a custom model file is used", {

@@ -64,7 +64,7 @@ fit$summary(c("h2", "sigma_G", "sigma_E", "corrG"))
 fit$diagnostic_summary()
 
 # Fixed effects, named after the columns of X: beta[trait, term]
-beta_draws <- animal_draws(fit, "beta")
+beta_draws <- rename_beta(fit, "beta")
 posterior::summarise_draws(beta_draws)
 
 # Posterior means of G and E. The traits are log distances, so variances are

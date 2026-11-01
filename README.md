@@ -103,7 +103,7 @@ Variables are reported on the **original scale** of the data:
 Fixed effects are `beta[j]` (univariate) or `beta[trait, j]` for column `j` of `X`. To get draws named after the columns of `X` (for example `beta[2,age]`), use:
 
 ```r
-animal_draws(fit, "beta")
+rename_beta(fit, "beta")
 ```
 
 With `cmd_stan = FALSE` the fit is a `stanfit` object from `rstan`, with `beta` already named after the columns of `X`.
@@ -265,7 +265,7 @@ colnames(Y) <- c("t1", "t2")
 
 fit <- lmm_animal(Y, X, A)
 fit$summary(c("G", "corrG", "h2"))
-animal_draws(fit, "beta")
+rename_beta(fit, "beta")
 ```
 
 # Notes

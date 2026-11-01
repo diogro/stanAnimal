@@ -42,7 +42,7 @@ lmm_multiCov(
 \item{...}{additional parameters for stan sampling.}
 }
 \value{
-With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{animal_draws}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
+With \code{cmd_stan = TRUE}, a \code{CmdStanMCMC} object from cmdstanr, usable with posterior and bayesplot (see \code{\link{lmm_animal}}); use \code{\link{rename_beta}} for \code{beta} draws named after the columns of \code{X}. With \code{cmd_stan = FALSE}, a \code{stanfit} object.
 }
 \description{
 Estimates the phenotypic covariance matrix \code{P} of one or more traits

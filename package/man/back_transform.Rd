@@ -62,6 +62,6 @@ apply(post$G, c(1, 2), mean)   # posterior mean G on the trait scale
 apply(post$h2, 1, mean)
 }
 \seealso{
-\code{\link{size_shape}}, \code{\link{animal_draws}},
+\code{\link{size_shape}}, \code{\link{rename_beta}},
   \code{\link{to_draws_list}}
 }

@@ -62,7 +62,7 @@
 #'   shape scores instead (see \code{\link{size_shape}}); \code{\link{pc_dominance}}
 #'   reports that share.
 #' @seealso \code{\link{lmm_animal}}, \code{\link{makeA}},
-#'   \code{\link{genomic_relationship}}, \code{\link{animal_draws}}
+#'   \code{\link{genomic_relationship}}, \code{\link{rename_beta}}
 #' @examples
 #' dat <- data.frame(trait = rnorm(6), x = rnorm(6),
 #'                   sex = rep(c(0, 1), each = 3), id = 1:6)

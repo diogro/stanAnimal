@@ -42,10 +42,10 @@ test_that("outputs are internally consistent", {
   expect_equal(as.numeric(g11), as.numeric(d[, "sigma_G[1]"]^2), tolerance = 1e-6)
 })
 
-test_that("animal_draws names beta after the columns of X", {
+test_that("rename_beta names beta after the columns of X", {
   sim <- simulate_animal(n_fam = 20, size = 6, G = G3, E = E3, seed = 23)
   fit <- fit_G(sim)
-  v <- posterior::variables(animal_draws(fit, "beta"))
+  v <- posterior::variables(rename_beta(fit, "beta"))
   expect_true(all(c("beta[1,Int]", "beta[2,x]", "beta[3,z]") %in% v))
   expect_equal(length(v), 9)
 })
