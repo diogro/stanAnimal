@@ -111,3 +111,52 @@ test_that("proportional G/E (degenerate eigenvalues) samples cleanly", {
   expect_true(all(h2 > 0 & h2 < 1))
   expect_lt(abs(mean(h2) - 0.5), 0.2)
 })
+
+test_that("animal_parameter_draws and the prior/posterior plots read a CmdStan fit", {
+  sim <- simulate_animal(n_fam = 20, size = 6, G = G3, E = E3, seed = 27)
+  fit <- fit_G(sim, iter = 400)
+  d <- animal_parameter_draws(fit, c("a", "b", "c"))
+  expect_equal(nrow(d), 6 * posterior::ndraws(fit$draws()))
+  expect_setequal(unique(d$parameter),
+                  c("a", "b", "c", "a ~ b", "a ~ c", "b ~ c"))
+  cor <- d$value[d$type == "Genetic correlation"]
+  expect_true(all(cor >= -1 & cor <= 1))
+  # the draws are the fit's own h2, not a re-simulation
+  h2 <- d$value[d$type == "Heritability"]
+  means <- tapply(h2, d$parameter[d$type == "Heritability"], mean)
+  expect_equal(as.numeric(means[c("a", "b", "c")]), fit$summary("h2", "mean")$mean)
+
+  expect_s3_class(plot_prior_posterior(fit, n_prior = 100), "ggplot")
+  p <- plot_forest(fit, n_prior = 100, prob = 0.9)
+  expect_no_error(ggplot2::ggplot_build(p))
+  expect_match(p$labels$x, "90%")
+})
+
+test_that("plot_G_ellipses reads G and beta from a CmdStan fit", {
+  sim <- simulate_animal(n_fam = 20, size = 6, G = G3, E = E3, seed = 28)
+  fit <- fit_G(sim, iter = 400)
+
+  p <- plot_G_ellipses(fit, sim$Y, X = sim$X, prob = 0.5)
+  built <- ggplot2::ggplot_build(p)$data
+  point_layer <- which(vapply(p$layers, function(layer)
+    inherits(layer$geom, "GeomPoint"), logical(1)))[[1]]
+  points <- built[[point_layer]]
+  b <- fit$summary("beta", "mean")
+  B <- matrix(b$mean[match(sprintf("beta[%d,%d]", rep(1:3, 3), rep(1:3, each = 3)),
+                            b$variable)], 3)
+  expected <- sim$Y - sim$X %*% t(B)
+  # one scatter panel per pair, the lower triangle of the 3 by 3 grid
+  lower <- rbind(data.frame(x = expected[, 1], y = expected[, 2]),
+                 data.frame(x = expected[, 1], y = expected[, 3]),
+                 data.frame(x = expected[, 2], y = expected[, 3]))
+  expect_equal(sort(points$x), sort(lower$x))
+  expect_equal(sort(points$y), sort(lower$y))
+  labels <- unlist(lapply(built, function(layer) as.character(layer$label)))
+  expect_true(any(grepl("genetic correlation", labels)))
+  expect_true(any(grepl("50% HPD", labels)))
+
+  # a draws object from the same fit gives the same plot data
+  p2 <- plot_G_ellipses(fit$draws(c("G", "beta")), sim$Y, X = sim$X, prob = 0.5)
+  expect_s3_class(p2, "ggplot")
+  expect_equal(ggplot2::ggplot_build(p2)$data[[1]], built[[1]])
+})

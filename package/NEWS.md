@@ -90,5 +90,9 @@
 * New tests cover the bundled datasets, the `X` option of `plot_G_ellipses()`
   and `to_draws_list()`, the sampler `control` pass-through of both engines, and
   the choice between `cmdstanr` and `rstan`.
+* The Stan-specific branches of `animal_parameter_draws()`,
+  `plot_prior_posterior()`, `plot_forest()` and `plot_G_ellipses()` are exercised
+  on a real `CmdStanMCMC` fit, not only on synthetic draws, and the cache
+  directory is tested through `STANANIMAL_CACHE_DIR` as well as the option.
 * The code blocks of the README are now evaluated as a test, so documentation
   cannot drift from the API unnoticed (skipped outside a checkout and on CRAN).
