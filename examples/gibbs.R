@@ -16,7 +16,7 @@ if(!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
 pak::pkg_install(pkgs, upgrade = FALSE)
 invisible(lapply(pkgs, library, character.only = TRUE))
 
-library(stanAnimal)
+library(stanimal)
 
 ## Simulation
 # Half-sib families give a block relationship matrix without needing a package.

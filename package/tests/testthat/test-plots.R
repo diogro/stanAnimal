@@ -12,14 +12,14 @@ test_that("prior draws have valid ranges and names", {
                   c("a", "b", "c", "a ~ b", "a ~ c", "b ~ c"))
   expect_true(all(d$value > -1 & d$value < 1))
   expect_true(all(d$value[d$type == "Heritability"] > 0))
-  lkj <- stanAnimal:::.rlkj(4, 2)
+  lkj <- stanimal:::.rlkj(4, 2)
   expect_true(all(eigen(lkj)$values > 0))
   expect_equal(diag(lkj), rep(1, 4))
 })
 
 test_that("LKJ(1) pairwise correlations are uniform-ish and eta shrinks", {
   set.seed(1)
-  r2 <- vapply(1:2000, function(i) stanAnimal:::.rlkj(2, 2)[1, 2], 0)
+  r2 <- vapply(1:2000, function(i) stanimal:::.rlkj(2, 2)[1, 2], 0)
   expect_lt(abs(var(r2) - 1 / 5), 0.03) # Var = 1 / (2 * eta + 1)
 })
 

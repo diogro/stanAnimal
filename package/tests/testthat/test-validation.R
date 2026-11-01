@@ -48,7 +48,7 @@ test_that("X must be able to represent a constant", {
   expect_error(lmm_animal(Y, no_intercept, A, cmd_stan = FALSE),
                "cannot represent a constant")
   # factor indicators span the constant, so they are fine
-  expect_silent(stanAnimal:::.check_response_design(
+  expect_silent(stanimal:::.check_response_design(
     Y, stats::model.matrix(~ 0 + factor(rep(c(0, 1), length.out = nrow(Y))))))
 })
 
@@ -71,19 +71,19 @@ test_that("lmm_animal_gibbs validates its inputs", {
 test_that("custom model files are read and missing defaults error", {
   f <- tempfile(fileext = ".stan")
   writeLines("parameters { real x; } model { x ~ normal(0, 1); }", f)
-  expect_match(stanAnimal:::.read_animal_model_code(f), "normal\\(0, 1\\)")
-  expect_match(stanAnimal:::.read_animal_model_code(NULL, "animalModelG.stan"),
+  expect_match(stanimal:::.read_animal_model_code(f), "normal\\(0, 1\\)")
+  expect_match(stanimal:::.read_animal_model_code(NULL, "animalModelG.stan"),
                "lkj_corr_cholesky")
-  expect_match(stanAnimal:::.read_animal_model_code(NULL, "phenotypicModel.stan"),
+  expect_match(stanimal:::.read_animal_model_code(NULL, "phenotypicModel.stan"),
                "sigma_P")
-  expect_error(stanAnimal:::.read_animal_model_code(NULL, "nope.stan"),
+  expect_error(stanimal:::.read_animal_model_code(NULL, "nope.stan"),
                "Could not locate")
 })
 
 test_that("all shipped Stan files are discoverable", {
   for (f in c("animalModelG.stan", "animalModelUni.stan",
               "animalModelUniH2.stan", "phenotypicModel.stan"))
-    expect_true(nzchar(stanAnimal:::.read_animal_model_code(NULL, f)))
+    expect_true(nzchar(stanimal:::.read_animal_model_code(NULL, f)))
 })
 
 test_that("an invalid LKJ shape is rejected before Stan runs", {

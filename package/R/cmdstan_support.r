@@ -64,29 +64,29 @@ cstan <- function(model_code, data = list(), chains = 1, cores = 1, iter = 1000,
 #'
 #' Models fit with \code{cmd_stan = TRUE} are compiled once and the executables
 #' are reused in later R sessions. The cache lives in the directory given by
-#' \code{options(stanAnimal.cache_dir = )} or the environment variable
-#' \code{STANANIMAL_CACHE_DIR}, and defaults to the user cache directory
-#' returned by \code{tools::R_user_dir("stanAnimal", "cache")}. Executables are
+#' \code{options(stanimal.cache_dir = )} or the environment variable
+#' \code{STANIMAL_CACHE_DIR}, and defaults to the user cache directory
+#' returned by \code{tools::R_user_dir("stanimal", "cache")}. Executables are
 #' specific to the CmdStan version and platform; after upgrading CmdStan, call
-#' \code{stanAnimal_clear_cache()}.
+#' \code{stanimal_clear_cache()}.
 #' @return \code{stan_cache_dir()} returns the (created) cache directory.
-#'   \code{stanAnimal_clear_cache()} deletes its contents and returns the
+#'   \code{stanimal_clear_cache()} deletes its contents and returns the
 #'   number of files removed, invisibly.
 #' @rdname stan_cache
 #' @export
 stan_cache_dir <- function() {
-  dir <- getOption("stanAnimal.cache_dir")
+  dir <- getOption("stanimal.cache_dir")
   if (is.null(dir) || !nzchar(dir))
-    dir <- Sys.getenv("STANANIMAL_CACHE_DIR", unset = "")
+    dir <- Sys.getenv("STANIMAL_CACHE_DIR", unset = "")
   if (!nzchar(dir))
-    dir <- tools::R_user_dir("stanAnimal", "cache")
+    dir <- tools::R_user_dir("stanimal", "cache")
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   normalizePath(dir)
 }
 
 #' @rdname stan_cache
 #' @export
-stanAnimal_clear_cache <- function() {
+stanimal_clear_cache <- function() {
   files <- list.files(stan_cache_dir(), full.names = TRUE, all.files = TRUE,
                       no.. = TRUE)
   unlink(files, recursive = TRUE)

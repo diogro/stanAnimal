@@ -333,7 +333,7 @@ rename_beta <- function(fit, variables = NULL, ...) {
     return(readChar(model_file, file.info(model_file)$size))
 
   model_filename <- default
-  model_path <- system.file("stan", model_filename, package = "stanAnimal")
+  model_path <- system.file("stan", model_filename, package = "stanimal")
   if (!nzchar(model_path)) {
     candidates <- file.path(c("inst/stan", "package/inst/stan"), model_filename)
     model_path <- candidates[file.exists(candidates)][1L]

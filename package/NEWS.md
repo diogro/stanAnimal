@@ -1,4 +1,15 @@
-# stanAnimal 0.5.1
+# stanimal 0.5.1
+
+## Name change
+
+* The package is now called **stanimal** instead of **stanAnimal**. The
+  functions keep their names (`lmm_animal()`, `animal_design()`, `makeA()`), so
+  only `library()`, the installed package name and the two cache settings
+  change: `options(stanAnimal.cache_dir = )` is now
+  `options(stanimal.cache_dir = )`, and `STANANIMAL_CACHE_DIR` is now
+  `STANIMAL_CACHE_DIR`. Compiled models are cached per package name, so the
+  first fit after upgrading recompiles; `stanimal_clear_cache()` removes the old
+  files.
 
 ## Improvements
 
@@ -139,6 +150,6 @@
 * The Stan-specific branches of `animal_parameter_draws()`,
   `plot_prior_posterior()`, `plot_forest()` and `plot_G_ellipses()` are exercised
   on a real `CmdStanMCMC` fit, not only on synthetic draws, and the cache
-  directory is tested through `STANANIMAL_CACHE_DIR` as well as the option.
+  directory is tested through `STANIMAL_CACHE_DIR` as well as the option.
 * The code blocks of the README are now evaluated as a test, so documentation
   cannot drift from the API unnoticed (skipped outside a checkout and on CRAN).

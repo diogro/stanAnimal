@@ -14,7 +14,7 @@ if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
 invisible(lapply(sub("^.*/", "", list_pkgs), library, character.only = TRUE))
 
 
-library(stanAnimal)
+library(stanimal)
 
 # ratones_morpho ships with the package: 329 mice, 35 cranial distances and the
 # individual information (sex, age, generation, line). No network access needed.

@@ -20,7 +20,7 @@ library(cmdstanr)
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
-library(stanAnimal)
+library(stanimal)
 
 ## Simulation
 ped = randomPed(1500, 50, seed = 2)

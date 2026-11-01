@@ -1,9 +1,9 @@
 test_that(".beta_names uses trait indices only for several traits", {
-  expect_equal(stanAnimal:::.beta_names(c("Int", "x"), 1)$new,
+  expect_equal(stanimal:::.beta_names(c("Int", "x"), 1)$new,
                c("beta[Int]", "beta[x]"))
-  expect_equal(stanAnimal:::.beta_names(c("Int", "x"), 1)$old,
+  expect_equal(stanimal:::.beta_names(c("Int", "x"), 1)$old,
                c("beta[1]", "beta[2]"))
-  nm <- stanAnimal:::.beta_names(c("Int", "x"), 2)
+  nm <- stanimal:::.beta_names(c("Int", "x"), 2)
   expect_equal(nm$old, c("beta[1,1]", "beta[2,1]", "beta[1,2]", "beta[2,2]"))
   expect_equal(nm$new, c("beta[1,Int]", "beta[2,Int]", "beta[1,x]", "beta[2,x]"))
 })
@@ -36,6 +36,6 @@ test_that("rename_beta renames multi-trait beta", {
 test_that(".warn_low_bfmi warns only below the threshold", {
   mk <- function(e) structure(list(diagnostic_summary = function(...)
     list(ebfmi = e)), class = "CmdStanMCMC")
-  expect_warning(stanAnimal:::.warn_low_bfmi(mk(c(0.1, 0.2, 0.9, 0.9))), "h2")
-  expect_no_warning(stanAnimal:::.warn_low_bfmi(mk(c(0.8, 0.9))))
+  expect_warning(stanimal:::.warn_low_bfmi(mk(c(0.1, 0.2, 0.9, 0.9))), "h2")
+  expect_no_warning(stanimal:::.warn_low_bfmi(mk(c(0.8, 0.9))))
 })

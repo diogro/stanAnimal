@@ -8,7 +8,7 @@ skip_if_no_cmdstan <- function() {
 skip_if_no_rstan <- function() {
   testthat::skip_on_cran()
   testthat::skip_if_not_installed("rstan")
-  testthat::skip_if(Sys.getenv("STANANIMAL_SKIP_RSTAN") == "true",
+  testthat::skip_if(Sys.getenv("STANIMAL_SKIP_RSTAN") == "true",
                     "rstan tests disabled")
 }
 

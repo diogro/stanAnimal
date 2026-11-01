@@ -2,24 +2,24 @@
 % Please edit documentation in R/cmdstan_support.r
 \name{stan_cache_dir}
 \alias{stan_cache_dir}
-\alias{stanAnimal_clear_cache}
+\alias{stanimal_clear_cache}
 \title{Location of the compiled Stan model cache}
 \usage{
 stan_cache_dir()
 
-stanAnimal_clear_cache()
+stanimal_clear_cache()
 }
 \value{
 \code{stan_cache_dir()} returns the (created) cache directory.
-  \code{stanAnimal_clear_cache()} deletes its contents and returns the
+  \code{stanimal_clear_cache()} deletes its contents and returns the
   number of files removed, invisibly.
 }
 \description{
 Models fit with \code{cmd_stan = TRUE} are compiled once and the executables
 are reused in later R sessions. The cache lives in the directory given by
-\code{options(stanAnimal.cache_dir = )} or the environment variable
-\code{STANANIMAL_CACHE_DIR}, and defaults to the user cache directory
-returned by \code{tools::R_user_dir("stanAnimal", "cache")}. Executables are
+\code{options(stanimal.cache_dir = )} or the environment variable
+\code{STANIMAL_CACHE_DIR}, and defaults to the user cache directory
+returned by \code{tools::R_user_dir("stanimal", "cache")}. Executables are
 specific to the CmdStan version and platform; after upgrading CmdStan, call
-\code{stanAnimal_clear_cache()}.
+\code{stanimal_clear_cache()}.
 }

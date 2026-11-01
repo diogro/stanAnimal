@@ -21,7 +21,7 @@ library(cmdstanr)
 
 options(mc.cores = 4)
 
-library(stanAnimal)
+library(stanimal)
 
 ## Data
 data(ratones_morpho)

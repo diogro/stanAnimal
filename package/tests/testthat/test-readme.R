@@ -32,10 +32,10 @@ readme_code_blocks <- function(path) {
 readme_context <- function() {
   env <- new.env(parent = globalenv())
   short_animal <- function(...)
-    stanAnimal::lmm_animal(..., iter = 200, warmup = 100, chains = 2, cores = 2,
+    stanimal::lmm_animal(..., iter = 200, warmup = 100, chains = 2, cores = 2,
                            refresh = 0, show_messages = FALSE)
   short_phen_cov <- function(...)
-    stanAnimal::lm_phen_cov(..., iter = 200, warmup = 100, chains = 2, cores = 2,
+    stanimal::lm_phen_cov(..., iter = 200, warmup = 100, chains = 2, cores = 2,
                              refresh = 0, show_messages = FALSE)
   assign("lmm_animal", short_animal, envir = env)
   assign("lm_phen_cov", short_phen_cov, envir = env)

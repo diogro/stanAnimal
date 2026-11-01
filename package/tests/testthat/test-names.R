@@ -3,7 +3,7 @@
 # names from creeping back as aliases.
 
 test_that("renamed functions replace the old exports", {
-  ns <- asNamespace("stanAnimal")
+  ns <- asNamespace("stanimal")
   expect_true(exists("rename_beta", envir = ns, inherits = FALSE))
   expect_true(exists("pc1_variance_share", envir = ns, inherits = FALSE))
   expect_true(exists("lm_phen_cov", envir = ns, inherits = FALSE))
@@ -13,6 +13,6 @@ test_that("renamed functions replace the old exports", {
 })
 
 test_that("the old names are not exported as aliases either", {
-  exports <- getNamespaceExports("stanAnimal")
+  exports <- getNamespaceExports("stanimal")
   expect_false(any(c("animal_draws", "pc_dominance", "lmm_multiCov") %in% exports))
 })

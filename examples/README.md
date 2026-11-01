@@ -1,6 +1,6 @@
 # Examples
 
-Runnable scripts for the models in `stanAnimal`. Run them from the project root,
+Runnable scripts for the models in `stanimal`. Run them from the project root,
 because the figures are written to `examples/figures/`:
 
 ```sh
@@ -21,7 +21,7 @@ is the posterior mean, the thick and thin segments are the 80% and 99% credible
 intervals, and the simulated value is the hollow triangle. The true values are
 matched to the draws by name, not by position.
 
-All scripts need `stanAnimal` installed and CmdStan available
+All scripts need `stanimal` installed and CmdStan available
 (`cmdstanr::install_cmdstan()`), except `gibbs.R`, which needs neither. The
 mouse data used by `ratones.R` and `phenotypic_covariance.R` ships with the
 package, so nothing is downloaded.

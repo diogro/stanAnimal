@@ -1,12 +1,12 @@
 # Parallel simulation study: recovery of genetic correlations in the
 # marginalized multivariate animal model, across sample sizes and replicates.
-# Results are written to results/ (see STANANIMAL_POWER_OUTPUT below).
+# Results are written to results/ (see STANIMAL_POWER_OUTPUT below).
 # Run from the project root with: Rscript examples/multivariate_power_simulation.R
-# Set STANANIMAL_POWER_METHOD=gibbs to fit the same datasets with lmm_animal_gibbs.
+# Set STANIMAL_POWER_METHOD=gibbs to fit the same datasets with lmm_animal_gibbs.
 
-method <- Sys.getenv("STANANIMAL_POWER_METHOD", "stan")
+method <- Sys.getenv("STANIMAL_POWER_METHOD", "stan")
 if (!method %in% c("stan", "gibbs"))
-  stop("STANANIMAL_POWER_METHOD must be 'stan' or 'gibbs'.")
+  stop("STANIMAL_POWER_METHOD must be 'stan' or 'gibbs'.")
 
 if (method == "stan" && !requireNamespace("cmdstanr", quietly = TRUE))
   stop("Install cmdstanr before running this checker.")
@@ -22,25 +22,25 @@ source("package/R/lmm_animal_gibbs.R")
 
 n_traits <- 4L
 sample_sizes <- c(48L, 96L, 192L)
-n_replicates <- as.integer(Sys.getenv("STANANIMAL_POWER_REPS", "40"))
-iterations <- as.integer(Sys.getenv("STANANIMAL_POWER_ITER", "1200"))
-warmup <- as.integer(Sys.getenv("STANANIMAL_POWER_WARMUP", as.character(iterations / 2)))
+n_replicates <- as.integer(Sys.getenv("STANIMAL_POWER_REPS", "40"))
+iterations <- as.integer(Sys.getenv("STANIMAL_POWER_ITER", "1200"))
+warmup <- as.integer(Sys.getenv("STANIMAL_POWER_WARMUP", as.character(iterations / 2)))
 default_workers <- parallel::detectCores()
 if (is.na(default_workers)) default_workers <- 1L
 workers <- as.integer(Sys.getenv(
-  "STANANIMAL_POWER_WORKERS", as.character(min(32L, default_workers))))
-seed <- as.integer(Sys.getenv("STANANIMAL_POWER_SEED", "20261030"))
-adapt_delta <- as.numeric(Sys.getenv("STANANIMAL_POWER_ADAPT_DELTA", "0.99"))
-output_dir <- Sys.getenv("STANANIMAL_POWER_OUTPUT",
+  "STANIMAL_POWER_WORKERS", as.character(min(32L, default_workers))))
+seed <- as.integer(Sys.getenv("STANIMAL_POWER_SEED", "20261030"))
+adapt_delta <- as.numeric(Sys.getenv("STANIMAL_POWER_ADAPT_DELTA", "0.99"))
+output_dir <- Sys.getenv("STANIMAL_POWER_OUTPUT",
                          if (method == "gibbs") "results/multivariate_power_gibbs" else "results/multivariate_power")
 chains <- if (method == "stan") 4L else 1L
-gibbs_thin <- as.integer(Sys.getenv("STANANIMAL_POWER_GIBBS_THIN", "1"))
+gibbs_thin <- as.integer(Sys.getenv("STANIMAL_POWER_GIBBS_THIN", "1"))
 
 if (anyNA(c(n_replicates, iterations, warmup, workers, seed)) ||
     n_replicates < 1L || iterations < 2L || warmup < 1L ||
     warmup >= iterations || workers < 1L || length(adapt_delta) != 1L ||
     !is.finite(adapt_delta) || adapt_delta <= 0.8 || adapt_delta >= 1)
-  stop("Check STANANIMAL_POWER_REPS, ITER, WARMUP, WORKERS, and SEED.")
+  stop("Check STANIMAL_POWER_REPS, ITER, WARMUP, WORKERS, and SEED.")
 
 # A lower-triangular factor defines an SPD correlation matrix with high,
 # moderate, weak/negative, and near-zero pairwise correlations.

@@ -1,4 +1,4 @@
-# stanAnimal
+# stanimal
 
 Bayesian animal models in Stan, with a focus on estimating the **additive genetic covariance matrix (G)** of one or more traits from a known relationship matrix. The intended niche is many traits measured on a moderate number of individuals: the cost that grows with the number of traits is the likelihood, and the one that grows with the number of individuals is the dense relationship matrix (see the cost notes under [Multivariate model](#multivariate-model)).
 
@@ -12,7 +12,7 @@ if (!requireNamespace("pak", quietly = TRUE))
 install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev",
                                        getOption("repos")))
 cmdstanr::install_cmdstan()
-pak::pkg_install("diogro/stanAnimal/package")
+pak::pkg_install("diogro/stanimal/package")
 ```
 
 Requires R 4.0.0 or later.
@@ -27,7 +27,7 @@ The package ships the measurements and the pedigree of the mouse artificial-sele
 The rows of `ratones_morpho` are named with the individual IDs, so a relationship matrix built from the pedigree is matched to the records automatically:
 
 ```r
-library(stanAnimal)
+library(stanimal)
 traits <- c("IS_PM", "NSL_NA", "PT_BA", "BA_OPI")
 ratones_morpho[traits] <- log(ratones_morpho[traits])   # morphometrics on the log scale
 
@@ -43,7 +43,7 @@ fit$summary(c("h2", "corrG"))
 # Usage
 
 ```r
-library(stanAnimal)
+library(stanimal)
 
 # Y: trait matrix (individuals in rows), one record per individual
 # X: fixed effects model matrix (full column rank, and able to represent a
@@ -228,7 +228,7 @@ All models standardize the response and divide continuous predictors by their st
 
 ## Compilation cache
 
-Models fit with cmdstanr are compiled once and the executable is reused in later R sessions. The cache is in `tools::R_user_dir("stanAnimal", "cache")` by default; change it with `options(stanAnimal.cache_dir = "path")` or the `STANANIMAL_CACHE_DIR` environment variable. Use `stan_cache_dir()` to see the location, and run `stanAnimal_clear_cache()` after upgrading CmdStan.
+Models fit with cmdstanr are compiled once and the executable is reused in later R sessions. The cache is in `tools::R_user_dir("stanimal", "cache")` by default; change it with `options(stanimal.cache_dir = "path")` or the `STANIMAL_CACHE_DIR` environment variable. Use `stan_cache_dir()` to see the location, and run `stanimal_clear_cache()` after upgrading CmdStan.
 
 ## Other options
 

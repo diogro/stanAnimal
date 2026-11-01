@@ -45,7 +45,7 @@ test_that("the E-BFMI warning is raised only for the variance parametrization", 
   skip_on_cran()
   mock <- structure(list(diagnostic_summary = function(...) list(ebfmi = 0.1)),
                     class = "CmdStanMCMC")
-  expect_warning(stanAnimal:::.warn_low_bfmi(mock), "parametrization")
+  expect_warning(stanimal:::.warn_low_bfmi(mock), "parametrization")
 })
 
 test_that("factor indicators instead of an intercept recover group means", {
