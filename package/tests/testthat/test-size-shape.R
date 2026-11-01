@@ -138,3 +138,53 @@ test_that("back_transform validates its input", {
   expect_error(back_transform(matrix(0, 2, 2), ss), "named matrix")
 })
 
+test_that("to_draws_list reshapes the arrays into posterior draws", {
+  ss <- size_shape(Y4)
+  k <- 4
+  G <- matrix(0.3, k, k); diag(G) <- 1
+  E <- matrix(0.1, k, k); diag(E) <- 2
+  m <- cbind(matrix(rep(as.vector(G), 3), 3, byrow = TRUE),
+             matrix(rep(as.vector(E), 3), 3, byrow = TRUE))
+  colnames(m) <- c(names_mat("G", k), names_mat("E", k))
+  post <- back_transform(m, ss)
+
+  draws <- to_draws_list(post)
+  expect_named(draws, c("G", "E", "P", "corrG", "corrP", "h2"))
+  expect_identical(attr(draws, "traits"), ss$raw_traits)
+  expect_s3_class(draws$G, "draws_matrix")
+  expect_equal(dim(draws$G), c(3L, k * k))
+  expect_identical(posterior::variables(draws$G), names_mat("G", k))
+  expect_equal(as.numeric(as.matrix(draws$G)[1, ]), as.numeric(post$G[, , 1]))
+
+  # correlations appear once per pair, above the diagonal
+  pairs <- which(upper.tri(diag(k)), arr.ind = TRUE)
+  pairs <- pairs[order(pairs[, 1], pairs[, 2]), , drop = FALSE]
+  expect_identical(posterior::variables(draws$corrG),
+                   sprintf("corrG[%d,%d]", pairs[, 1], pairs[, 2]))
+  expect_equal(as.numeric(as.matrix(draws$corrG)[1, ]),
+               as.numeric(post$corrG[cbind(pairs[, 1], pairs[, 2], rep(1L, nrow(pairs)))]))
+
+  expect_identical(posterior::variables(draws$h2), sprintf("h2[%d]", seq_len(k)))
+  expect_equal(as.numeric(as.matrix(draws$h2)[1, ]), as.numeric(post$h2[, 1]))
+
+  # the draws objects can be summarised on their own or bound together
+  expect_s3_class(posterior::summarise_draws(draws$corrG), "data.frame")
+  # bind_draws() takes the draws objects as unnamed arguments
+  expect_s3_class(do.call(posterior::bind_draws, unname(draws)), "draws_matrix")
+})
+
+test_that("to_draws_list handles a phenotypic fit and validates its input", {
+  ss <- size_shape(Y4)
+  k <- 4
+  P <- matrix(0.2, k, k); diag(P) <- 1.5
+  m <- matrix(rep(as.vector(P), 2), 2, byrow = TRUE)
+  colnames(m) <- names_mat("P", k)
+  post <- back_transform(m, ss)
+
+  draws <- to_draws_list(post)
+  expect_named(draws, c("P", "corrP", "sigma_P"))
+  expect_identical(posterior::variables(draws$sigma_P),
+                   sprintf("sigma_P[%d]", seq_len(k)))
+  expect_equal(as.numeric(as.matrix(draws$sigma_P)[1, ]), as.numeric(post$sigma_P[, 1]))
+  expect_error(to_draws_list(list()), "size_shape_draws")
+})

@@ -234,6 +234,78 @@ back_transform <- function(fit, transform) {
   structure(c(components, list(traits = traits)), class = "size_shape_draws")
 }
 
+#' Convert the back-transformed draws to posterior draws
+#'
+#' Reshapes the arrays returned by \code{\link{back_transform}} into
+#' \code{\link[posterior]{draws_matrix}} objects, one per quantity, so that
+#' the \pkg{posterior} and \pkg{bayesplot} tools can be used on them.
+#'
+#' @param x A \code{size_shape_draws} object from
+#'   \code{\link{back_transform}}.
+#' @return A named list of \code{draws_matrix} objects, one per quantity of
+#'   \code{x}, with the variables named as the models report them:
+#'   \code{G[i,j]}, \code{E[i,j]} and \code{P[i,j]} for every element of the
+#'   covariance matrices, \code{corrG[i,j]} and \code{corrP[i,j]} for the
+#'   correlations above the diagonal only, and \code{h2[i]} or
+#'   \code{sigma_P[i]} for the vectors. The trait names are kept in
+#'   \code{attr(, "traits")}.
+#' @details Correlations are reported once per pair, for \code{i < j}, because
+#'   the two halves of the matrix are identical and a draws object has no
+#'   notion of symmetry.
+#'
+#'   To get everything back in a single draws object, bind the elements with
+#'   \code{do.call(posterior::bind_draws, unname(draws))}. The names of the
+#'   list have to be dropped, because \code{bind_draws()} takes the draws
+#'   objects as unnamed arguments.
+#' @seealso \code{\link{back_transform}}
+#' @examples
+#' ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
+#' k <- length(ss$raw_traits)
+#' m <- cbind(matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE),
+#'            matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE))
+#' colnames(m) <- c(sprintf("G[%d,%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)),
+#'                  sprintf("E[%d,%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)))
+#' draws <- to_draws_list(back_transform(m, ss))
+#' names(draws)
+#' posterior::summarise_draws(draws$corrG)
+#' combined <- do.call(posterior::bind_draws, unname(draws))
+#' posterior::variables(combined)[1:4]
+#' @export
+to_draws_list <- function(x) {
+  if (!inherits(x, "size_shape_draws"))
+    stop("x must be a size_shape_draws object from back_transform().",
+         call. = FALSE)
+
+  components <- setdiff(names(x), "traits")
+  out <- lapply(components, function(component) {
+    values <- x[[component]]
+    if (length(dim(values)) == 3L) {
+      k <- dim(values)[1]
+      n <- dim(values)[3]
+      if (startsWith(component, "corr")) {
+        pairs <- which(upper.tri(diag(k)), arr.ind = TRUE)
+        pairs <- pairs[order(pairs[, 1], pairs[, 2]), , drop = FALSE]
+        index <- cbind(rep(pairs[, 1], each = n), rep(pairs[, 2], each = n),
+                       rep(seq_len(n), times = nrow(pairs)))
+        draws <- matrix(values[index], n, nrow(pairs))
+        variables <- sprintf("%s[%d,%d]", component, pairs[, 1], pairs[, 2])
+      } else {
+        draws <- t(matrix(values, nrow = k * k))
+        variables <- sprintf("%s[%d,%d]", component, rep(seq_len(k), k),
+                             rep(seq_len(k), each = k))
+      }
+    } else {
+      draws <- t(values)
+      variables <- sprintf("%s[%d]", component, seq_along(x$traits))
+    }
+    colnames(draws) <- variables
+    posterior::as_draws_matrix(draws)
+  })
+  names(out) <- components
+  attr(out, "traits") <- x$traits
+  out
+}
+
 #' @export
 print.size_shape_draws <- function(x, ...) {
   components <- setdiff(names(x), "traits")
