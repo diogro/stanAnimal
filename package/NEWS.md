@@ -34,6 +34,11 @@
   longer than the run is an error naming the argument instead of a failure
   inside the Stan call.
 
+* `X` is optional in `lmm_animal()`, `lm_phen_cov()` and `lmm_animal_gibbs()`.
+  Leaving it out fits an intercept-only model: one column of ones named
+  `(Intercept)`, so the draws come out as `beta[(Intercept)]`, as they do with
+  an explicit intercept column, and `beta` keeps its trait dimension.
+
 # stanAnimal 0.5.0
 
 ## Breaking changes

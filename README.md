@@ -51,13 +51,14 @@ library(stanimal)
 
 # Y: trait matrix (individuals in rows), one record per individual
 # X: fixed effects model matrix (full column rank, and able to represent a
-#    constant: include an intercept column)
+#    constant: include an intercept column). Optional: leave it out for an
+#    intercept-only fit
 # A: relationship matrix, same individual order as Y and X
 A <- makeA(pedigree)                   # or genomic_relationship(genotypes)
 fit <- lmm_animal(Y, X, A)
 ```
 
-`Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive definite; if it is only positive semidefinite (duplicated individuals, for example), fit with `blend_A = TRUE`. When `A` and the rows of `Y` are both named, `A` is put in the row order of `Y`; names that disagree are an error. Without names, the rows are assumed to be in the same order and only the dimensions are checked.
+`Y` can be a vector (univariate) or a matrix (multivariate). `X` is optional: `lmm_animal(Y, A = A)` fits an intercept-only model, with the intercept named `(Intercept)` in the `beta` draws. `A` must be symmetric and positive definite; if it is only positive semidefinite (duplicated individuals, for example), fit with `blend_A = TRUE`. When `A` and the rows of `Y` are both named, `A` is put in the row order of `Y`; names that disagree are an error. Without names, the rows are assumed to be in the same order and only the dimensions are checked.
 
 ## Univariate models
 

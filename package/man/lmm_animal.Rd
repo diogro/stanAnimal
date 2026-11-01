@@ -6,7 +6,7 @@
 \usage{
 lmm_animal(
   Y,
-  X,
+  X = NULL,
   A,
   lkj_prior = 2,
   beta_prior = c(1, 1),
@@ -26,7 +26,7 @@ lmm_animal(
 \arguments{
 \item{Y}{response variable, univariate or multivariate. Every trait must vary: constant traits cannot be standardized and are an error.}
 
-\item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
+\item{X}{Optional finite numeric fixed-effects matrix with the same rows as Y and full column rank. The default \code{NULL} fits an intercept-only model: one column of ones, named \code{"(Intercept)"}. A matrix must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
 
 \item{A}{Finite symmetric positive-definite relationship matrix matching the rows of Y. A matrix that is only positive semidefinite (duplicated individuals, for example) is rejected; set \code{blend_A = TRUE} to regularize it. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.}
 

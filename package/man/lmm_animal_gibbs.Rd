@@ -4,15 +4,17 @@
 \alias{lmm_animal_gibbs}
 \title{Fit an animal model with a Gibbs sampler}
 \usage{
-lmm_animal_gibbs(Y, X, A, iter = 1000, warmup = floor(iter/2), thin = 1)
+lmm_animal_gibbs(Y, X = NULL, A, iter = 1000, warmup = floor(iter/2), thin = 1)
 }
 \arguments{
 \item{Y}{Numeric response vector or matrix, with individuals in rows. Every
 trait must vary, and is checked as in \code{\link{lmm_animal}}.}
 
-\item{X}{Numeric full-column-rank fixed-effects design matrix, with the same
-rows as \code{Y}. Unlike the Stan models, it needs no column representing a
-constant: the sampler does not shift the response mean through the design.}
+\item{X}{Optional numeric full-column-rank fixed-effects design matrix, with
+the same rows as \code{Y}. The default \code{NULL} fits an intercept-only
+model: one column of ones, named \code{"(Intercept)"}. Unlike the Stan
+models, it needs no column representing a constant: the sampler does not
+shift the response mean through the design.}
 
 \item{A}{Symmetric positive-semidefinite relationship matrix, with rows and
 columns in the same individual order as the rows of \code{Y}. When both

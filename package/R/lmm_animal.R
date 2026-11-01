@@ -29,7 +29,7 @@
 #' 
 #' Fits a univariate or multivariate linear mixed animal model using a known relatedness matrix
 #' @param Y response variable, univariate or multivariate. Every trait must vary: constant traits cannot be standardized and are an error.
-#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.
+#' @param X Optional finite numeric fixed-effects matrix with the same rows as Y and full column rank. The default \code{NULL} fits an intercept-only model: one column of ones, named \code{"(Intercept)"}. A matrix must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-definite relationship matrix matching the rows of Y. A matrix that is only positive semidefinite (duplicated individuals, for example) is rejected; set \code{blend_A = TRUE} to regularize it. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics. A finite number above 0.
 #' @param beta_prior Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.
@@ -56,7 +56,7 @@
 #' Continuous predictors are centered and divided by their sample standard deviation inside Stan. Constant and 0/1 indicator columns are not centered or scaled. Standardized slopes have \code{normal(0, 1)} priors; the intercept contribution has a wider \code{normal(0, 2.5)} prior. Returned \code{beta} coefficients are backtransformed to original predictor and response units, including restoring the response mean to the intercept; \code{beta_scaled} draws are also available.
 #' @export
 #' @author Diogo Melo
-lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
+lmm_animal = function(Y, X = NULL, A, lkj_prior = 2, beta_prior = c(1, 1),
                       parametrization = c("variance", "h2"),
                       iter = 3000, warmup = floor(iter/2), 
                       chains = 4, cores = chains, model_file = NULL, control = list(adapt_delta = 0.99), 
@@ -156,8 +156,14 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
 # Shared by every model function: Y and X, and the weights that restore the
 # response mean through the design. The Gibbs sampler does not shift the mean
 # through X, so it passes require_constant = FALSE.
+#
+# X is optional. Without one the model is intercept only: a single column of
+# ones, named as model.matrix() names the intercept, so the beta draws and the
+# reported means come out of the same code path as an explicit intercept column.
 .check_response_design <- function(Y, X, require_constant = TRUE) {
   Y <- .check_numeric_matrix(Y, "Y")
+  if (is.null(X))
+    X <- matrix(1, nrow(Y), 1L, dimnames = list(NULL, "(Intercept)"))
   X <- .check_numeric_matrix(X, "X")
   p <- ncol(X)
   if (nrow(Y) < 2L || p < 1L || nrow(X) != nrow(Y))

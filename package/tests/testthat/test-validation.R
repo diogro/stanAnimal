@@ -52,6 +52,27 @@ test_that("X must be able to represent a constant", {
     Y, stats::model.matrix(~ 0 + factor(rep(c(0, 1), length.out = nrow(Y))))))
 })
 
+test_that("X defaults to an intercept-only design", {
+  # the shared check builds one column of ones, named like model.matrix() does
+  intercept <- matrix(1, nrow(Y), 1L, dimnames = list(NULL, "(Intercept)"))
+  YX <- stanimal:::.check_response_design(Y, NULL)
+  expect_equal(YX$X, intercept)
+  expect_equal(unname(YX$x_mean_weight), 1)
+  expect_equal(stanimal:::.check_response_design(Y, NULL,
+                                                require_constant = FALSE)$X,
+               intercept)
+  # the Gibbs sampler does not shift the mean, but the default is the same
+  # design, and it reaches the beta draws
+  fit <- lmm_animal_gibbs(Y[, 1], A = A, iter = 200, warmup = 100)
+  expect_equal(dim(fit$beta), c(1, 1, 100))
+  expect_equal(dimnames(fit$beta)[[2]], "(Intercept)")
+  # every model takes X as optional: the check on Y is what fails next
+  Yna <- Y; Yna[1, 1] <- NA
+  expect_error(lmm_animal(Yna, A = A), "`Y` must contain only finite")
+  expect_error(lm_phen_cov(Yna), "`Y` must contain only finite")
+  expect_error(lmm_animal_gibbs(Yna, A = A), "`Y` must contain only finite")
+})
+
 test_that("lm_phen_cov validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
   expect_error(lm_phen_cov(Yna, X), "`Y` must contain only finite")

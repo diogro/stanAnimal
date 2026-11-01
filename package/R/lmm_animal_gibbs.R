@@ -5,9 +5,11 @@
 #' simulations and checks; its priors differ from those in \code{lmm_animal}.
 #' @param Y Numeric response vector or matrix, with individuals in rows. Every
 #'   trait must vary, and is checked as in \code{\link{lmm_animal}}.
-#' @param X Numeric full-column-rank fixed-effects design matrix, with the same
-#'   rows as \code{Y}. Unlike the Stan models, it needs no column representing a
-#'   constant: the sampler does not shift the response mean through the design.
+#' @param X Optional numeric full-column-rank fixed-effects design matrix, with
+#'   the same rows as \code{Y}. The default \code{NULL} fits an intercept-only
+#'   model: one column of ones, named \code{"(Intercept)"}. Unlike the Stan
+#'   models, it needs no column representing a constant: the sampler does not
+#'   shift the response mean through the design.
 #' @param A Symmetric positive-semidefinite relationship matrix, with rows and
 #'   columns in the same individual order as the rows of \code{Y}. When both
 #'   \code{A} and \code{Y} have row names they are used to put \code{A} in the
@@ -30,7 +32,7 @@
 #'   \code{lmm_animal}; the resulting posterior draws are not directly
 #'   interchangeable.
 #' @export
-lmm_animal_gibbs <- function(Y, X, A, iter = 1000, warmup = floor(iter / 2), thin = 1) {
+lmm_animal_gibbs <- function(Y, X = NULL, A, iter = 1000, warmup = floor(iter / 2), thin = 1) {
   .check_iterations(iter, warmup, thin)
   # No mean is shifted through the design here, so X needs no constant column.
   YX <- .check_response_design(Y, X, require_constant = FALSE)
