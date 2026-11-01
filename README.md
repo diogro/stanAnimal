@@ -9,9 +9,9 @@ Fits use [CmdStan](https://mc-stan.org/cmdstanr/) through `cmdstanr` (default) o
 ```r
 if (!requireNamespace("pak", quietly = TRUE))
     install.packages("pak")
-pak::pkg_install("stan-dev/cmdstanr")
+install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev",
+                                       getOption("repos")))
 cmdstanr::install_cmdstan()
-install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 pak::pkg_install("diogro/stanAnimal/package")
 ```
 
@@ -272,4 +272,3 @@ rename_beta(fit, "beta")
 
 - The models assume one record per individual.
 - Under development: the API may still change.
-

@@ -1,8 +1,9 @@
 Package: stanAnimal
-Version: 0.5.0.9000
+Version: 0.5.1
 Date: 2026-11-01
-Title: Animal models in Stan
+Title: Animal Models in Stan
 Description: Fit linear animal models in Stan for one or more traits.
+Additional_repositories: https://stan-dev.r-universe.dev
 Authors@R: person("Diogo", "Melo", , "diogro@gmail.com", c("aut", "cre"))
 Maintainer: Diogo Melo <diogro@gmail.com>
 License: GPL (>=3)

@@ -9,11 +9,13 @@
     if (.is_installed("cmdstanr")) return(TRUE)
     if (!.is_installed("rstan"))
       stop("fitting a model needs cmdstanr or rstan: install one of them with ",
-           "remotes::install_github(\"stan-dev/cmdstanr\") (then ",
+           "install.packages(\"cmdstanr\", repos = c(\"https://stan-dev.r-universe.dev\", ",
+           "getOption(\"repos\"))) (then ",
            "cmdstanr::install_cmdstan()) or install.packages(\"rstan\").",
            call. = FALSE)
     warning("cmdstanr is not installed, falling back to rstan. Install it with ",
-            "remotes::install_github(\"stan-dev/cmdstanr\"), then run ",
+            "install.packages(\"cmdstanr\", repos = c(\"https://stan-dev.r-universe.dev\", ",
+            "getOption(\"repos\"))), then run ",
             "cmdstanr::install_cmdstan().", call. = FALSE)
     return(FALSE)
   }

@@ -1,12 +1,10 @@
-# stanAnimal 0.5.0.9000
-
-## Breaking changes
-
-## New features
+# stanAnimal 0.5.1
 
 ## Improvements
 
-## Bug fixes
+* Declare the Stan project's R-universe as an additional repository for
+  `cmdstanr` and use it in the installation guidance.
+* Update package metadata and DOI references for the CRAN release.
 
 # stanAnimal 0.5.0
 

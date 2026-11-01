@@ -50,13 +50,13 @@
 #'       fitting.}
 #'   }
 #' @source Penna et al. (2017), archived at Dryad under CC0 1.0
-#'   (\href{https://doi.org/10.5061/dryad.5gr8r}{doi:10.5061/dryad.5gr8r}) and
+#'   (\doi{10.5061/dryad.5gr8r}) and
 #'   distributed by the MIT-licensed companion
 #'   package \url{https://github.com/diogro/ratones}.
 #' @references Penna, A., Melo, D., Bernardi, S., Oyarzabal, M. I., & Marroig,
 #'   G. (2017). The evolution of phenotypic integration: How directional
 #'   selection reshapes covariation in mice. Evolution, 71(10), 2370-2380.
-#'   \href{https://doi.org/10.1111/evo.13304}{doi:10.1111/evo.13304}
+#'   \doi{10.1111/evo.13304}
 #' @seealso \code{\link{ratones_pedigree}}, \code{\link{animal_design}}
 #' @examples
 #' data(ratones_morpho)
@@ -82,13 +82,13 @@
 #'       or an unknown parent.}
 #'   }
 #' @source Penna et al. (2017), archived at Dryad under CC0 1.0
-#'   (\href{https://doi.org/10.5061/dryad.5gr8r}{doi:10.5061/dryad.5gr8r}) and
+#'   (\doi{10.5061/dryad.5gr8r}) and
 #'   distributed by the MIT-licensed companion
 #'   package \url{https://github.com/diogro/ratones}.
 #' @references Penna, A., Melo, D., Bernardi, S., Oyarzabal, M. I., & Marroig,
 #'   G. (2017). The evolution of phenotypic integration: How directional
 #'   selection reshapes covariation in mice. Evolution, 71(10), 2370-2380.
-#'   \href{https://doi.org/10.1111/evo.13304}{doi:10.1111/evo.13304}
+#'   \doi{10.1111/evo.13304}
 #' @seealso \code{\link{ratones_morpho}}, \code{\link{animal_design}}
 #' @examples
 #' data(ratones_pedigree)

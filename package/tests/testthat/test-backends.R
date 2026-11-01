@@ -3,7 +3,7 @@ test_that("the Stan backend falls back to rstan with a usable message", {
     .is_installed = function(package) identical(package, "rstan"),
     .package = "stanAnimal")
   expect_warning(backend <- stanAnimal:::.resolve_stan_backend(TRUE),
-                 'remotes::install_github\\("stan-dev/cmdstanr"\\)')
+                 'install.packages\\("cmdstanr", repos = c\\("https://stan-dev[.]r-universe[.]dev"')
   expect_false(backend)
 })
 
