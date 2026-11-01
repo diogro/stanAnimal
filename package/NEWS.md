@@ -36,6 +36,14 @@
 
 ## Bug fixes
 
+* The mean of the response is now restored for any design whose columns can
+  represent a constant, not only when there is a literal intercept column. A
+  formula such as `y ~ 0 + factor(g)` used to return coefficients on the
+  centred response, missing the overall mean; they are now the group means.
+  A design that cannot represent a constant (`y ~ 0 + x`) is rejected with a
+  message, instead of silently returning coefficients that no longer match the
+  data.
+
 * A response trait that does not vary is now rejected with a clear message
   before the model is fitted. The univariate and multivariate Stan models
   standardize the responses by their standard deviation, so a constant trait

@@ -46,7 +46,8 @@ fit$summary(c("h2", "corrG"))
 library(stanAnimal)
 
 # Y: trait matrix (individuals in rows), one record per individual
-# X: fixed effects model matrix (full column rank, include an intercept column)
+# X: fixed effects model matrix (full column rank, and able to represent a
+#    constant: include an intercept column)
 # A: relationship matrix, same individual order as Y and X
 A <- makeA(pedigree)                   # or genomic_relationship(genotypes)
 fit <- lmm_animal(Y, X, A)
@@ -64,7 +65,7 @@ fit <- lmm_animal(design$Y, design$X, A)
 ```
 
 - the left-hand side is a single response or a `cbind()` of several traits, and the columns of `Y` are named after them;
-- `X` is the fixed-effects design matrix, so its columns match the `beta` draws reported by the fit; factors are dummy coded and the intercept is kept unless the formula removes it;
+- `X` is the fixed-effects design matrix, so its columns match the `beta` draws reported by the fit; factors are dummy coded and the intercept is kept unless the formula removes it, which is only allowed when the remaining columns still sum to a constant (the 0/1 indicators of a factor, for example, but not `y ~ 0 + x`), because the models centre the responses and report their mean back through the design;
 - random-effect terms such as `(1 | animal)` are ignored, so `lme4`-style formulas can be reused unchanged — relatedness is supplied through `A`;
 - rows with missing values are dropped (`na.action = stats::na.omit` by default), and the individuals kept, in row order, are returned in `attr(design, "individuals")`. Because `Y` keeps them as row names, a named `A` is reordered to match automatically:
 
@@ -221,7 +222,7 @@ fit <- lmm_animal(y, X, A, parametrization = "h2")
 
 ## Scaling
 
-All models standardize the response and divide continuous predictors by their standard deviation (constant and 0/1 columns are not scaled) for better sampling. Coefficients are back-transformed, so `beta` is in the original units of `X` and `Y`; the intercept is recovered when `X` has a constant column.
+All models standardize the response and divide continuous predictors by their standard deviation (constant and 0/1 columns are not scaled) for better sampling. Coefficients are back-transformed, so `beta` is in the original units of `X` and `Y`, and the mean of the response is restored through the design: onto an intercept column, or split across the indicator columns of a factor when the intercept is dropped.
 
 ## Compilation cache
 

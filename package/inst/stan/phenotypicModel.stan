@@ -8,6 +8,7 @@ data {
   matrix[N, J] X; // fixed effects design matrix
   matrix[N, K] Y; // response variables
   real<lower=0> lkj_prior; // LKJ shape for the correlation matrix
+  vector[J] x_mean_weight; // X * x_mean_weight is a column of ones
 }
 transformed data {
   vector[K] y_sd;
@@ -62,15 +63,14 @@ transformed parameters {
       beta[k, j] = y_sd[k] * beta_scaled[k, j] * x_scale_inv[j];
     }
   }
+  // The responses are centred and scaled, so the model predicts deviations from
+  // their mean. Put the mean back where the design can hold it: X
+  // x_mean_weight is a column of ones, so the shift lands on every prediction,
+  // whether the design has an intercept column or the indicators of a factor.
   for (k in 1:K) {
-    for (j in 1:J) {
-      if (x_is_constant[j] == 1 && x_constant_value[j] != 0) {
-        real center_shift = 0;
-        for (m in 1:J)
-          center_shift += x_center[m] * beta[k, m];
-        beta[k, j] += (y_mean[k] - center_shift) / x_constant_value[j];
-      }
-    }
+    real mean_shift = y_mean[k] - dot_product(x_center, beta[k]');
+    for (j in 1:J)
+      beta[k, j] += mean_shift * x_mean_weight[j];
   }
 }
 model {

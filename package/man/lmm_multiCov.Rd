@@ -21,7 +21,7 @@ lmm_multiCov(
 \arguments{
 \item{Y}{Numeric response vector or matrix, with individuals in rows. Every trait must vary: constant traits cannot be standardized and are an error.}
 
-\item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
+\item{X}{Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.}
 
 \item{lkj_prior}{Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations.}
 

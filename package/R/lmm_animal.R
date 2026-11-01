@@ -2,7 +2,7 @@
 #' 
 #' Fits a univariate or multivariate linear mixed animal model using a known relatedness matrix
 #' @param Y response variable, univariate or multivariate. Every trait must vary: constant traits cannot be standardized and are an error.
-#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.
+#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.
 #' @param A Finite symmetric positive-definite relationship matrix matching the rows of Y. A matrix that is only positive semidefinite (duplicated individuals, for example) is rejected; set \code{blend_A = TRUE} to regularize it. When \code{A} and \code{Y} both have row names, they are used to put \code{A} in the order of \code{Y}; names that disagree are an error. Without names the rows are matched by position.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrices of the multivariate model. \code{1} is uniform over correlation matrices, values above \code{1} shrink correlations toward zero, and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits: at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of genetic correlations, a well-known problem in quantitative genetics.
 #' @param beta_prior Parameters of the beta prior on h2, used only by the univariate model with \code{parametrization = "h2"}. The default \code{c(1, 1)} is flat on h2.
@@ -74,7 +74,8 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
                      N = nrow(Y),
                      X = X,
                      Y = as.numeric(Y),
-                     A = A)
+                     A = A,
+                     x_mean_weight = YX$x_mean_weight)
     uni_file <- if(parametrization == "h2") "animalModelUniH2.stan" else "animalModelUni.stan"
     if(parametrization == "h2")
       stan_data$beta_prior <- beta_prior
@@ -105,6 +106,7 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
                      Y = Y,
                      A = A,
                      lkj_prior = lkj_prior,
+                     x_mean_weight = YX$x_mean_weight,
                      unstructured_E = as.integer(residual_structure == "unstructured"))
     model_code <- .read_animal_model_code(model_file)
     if(cmd_stan){
@@ -150,7 +152,24 @@ lmm_animal = function(Y, X, A, lkj_prior = 2, beta_prior = c(1, 1),
     stop("every trait in Y must vary, so that it can be standardized: ",
          paste(labels[constant], collapse = ", "), call. = FALSE)
   }
-  list(Y = Y, X = X)
+  weights <- .intercept_weights(X)
+  if (is.null(weights))
+    stop("X cannot represent a constant, so the mean of the response cannot be ",
+         "reported: include an intercept column, or the 0/1 indicator columns ",
+         "of every level of a factor.", call. = FALSE)
+  list(Y = Y, X = X, x_mean_weight = weights)
+}
+
+# Weights w with X w equal to a column of ones, when the constant is in the
+# column space of X, and NULL when it is not. The models centre the responses,
+# so the response mean is reported back through these weights: an intercept
+# column gets all of it, the indicators of a factor share it.
+.intercept_weights <- function(X) {
+  weights <- qr.solve(X, rep(1, nrow(X)))
+  if (anyNA(weights)) return(NULL)
+  fitted <- drop(X %*% weights)
+  if (max(abs(fitted - 1)) > 1e-8 * max(1, max(abs(fitted)))) return(NULL)
+  weights
 }
 
 # Checks that A matches the rows of Y and returns it with its individuals in the

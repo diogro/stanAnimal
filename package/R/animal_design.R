@@ -45,7 +45,11 @@
 #'   The result satisfies what the model functions expect: \code{Y} is numeric
 #'   and \code{X} has full column rank. Factor predictors are dummy coded and
 #'   the intercept is kept unless the formula removes it, so the columns of
-#'   \code{X} match the \code{beta} draws reported by a fit.
+#'   \code{X} match the \code{beta} draws reported by a fit. Removing the
+#'   intercept is only allowed when the remaining columns still sum to a
+#'   constant, as the 0/1 indicators of a factor do, because the models centre
+#'   the responses and report their mean back through the design; a formula such
+#'   as \code{y ~ 0 + x} is an error.
 #'
 #'   When \code{pedigree} or \code{genotypes} is given, \code{A} is computed for
 #'   all individuals in the pedigree or genotype matrix and then subset to the
@@ -135,6 +139,10 @@ animal_design <- function(formula, data, na.action = stats::na.omit,
   if (qr(X)$rank < ncol(X))
     stop("the fixed-effects design matrix is not full rank; remove redundant ",
          "or collinear terms from the formula.", call. = FALSE)
+  if (is.null(.intercept_weights(X)))
+    stop("the fixed-effects design matrix cannot represent a constant, so the ",
+         "mean of the response cannot be reported: keep the intercept, or the ",
+         "0/1 indicator columns of every level of a factor.", call. = FALSE)
 
   out <- list(Y = Y, X = X)
   if (!is.null(pedigree) || !is.null(genotypes)) {

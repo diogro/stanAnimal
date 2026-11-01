@@ -41,6 +41,17 @@ test_that("constant traits are rejected before the model is fitted", {
   expect_error(lmm_animal(cbind(Y, flat = 1), X, A, cmd_stan = FALSE), "flat")
 })
 
+test_that("X must be able to represent a constant", {
+  no_intercept <- cbind(x = X[, "x"])
+  expect_error(lmm_animal(Y, no_intercept, A), "cannot represent a constant")
+  expect_error(lmm_multiCov(Y, no_intercept), "cannot represent a constant")
+  expect_error(lmm_animal(Y, no_intercept, A, cmd_stan = FALSE),
+               "cannot represent a constant")
+  # factor indicators span the constant, so they are fine
+  expect_silent(stanAnimal:::.check_response_design(
+    Y, stats::model.matrix(~ 0 + factor(rep(c(0, 1), length.out = nrow(Y))))))
+})
+
 test_that("lmm_multiCov validates Y and X", {
   Yna <- Y; Yna[1, 1] <- NA
   expect_error(lmm_multiCov(Yna, X), "Y must contain only finite")

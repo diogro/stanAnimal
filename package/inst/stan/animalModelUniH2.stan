@@ -8,6 +8,7 @@ data {
   vector[N] Y; // response variable
   matrix[N, N] A; // known relationship matrix (symmetric, PSD)
   vector<lower=0>[2] beta_prior; // beta prior on h2; c(1, 1) is flat
+  vector[J] x_mean_weight; // X * x_mean_weight is a column of ones
 }
 transformed data {
   vector[N] lambda;
@@ -68,11 +69,14 @@ transformed parameters {
   for (j in 1:J) {
     beta[j] = y_sd * beta_scaled[j] * x_scale_inv[j];
   }
-  for (j in 1:J) {
-    if (x_is_constant[j] == 1 && x_constant_value[j] != 0) {
-      real center_shift = dot_product(x_center, beta);
-      beta[j] += (y_mean - center_shift) / x_constant_value[j];
-    }
+  // The response is centred and scaled, so the model predicts deviations from
+  // its mean. Put the mean back where the design can hold it: X x_mean_weight is
+  // a column of ones, so the shift lands on every prediction, whether the design
+  // has an intercept column or the indicators of a factor.
+  {
+    real mean_shift = y_mean - dot_product(x_center, beta);
+    for (j in 1:J)
+      beta[j] += mean_shift * x_mean_weight[j];
   }
 }
 model {

@@ -5,7 +5,7 @@
 #' information. It is the counterpart of \code{\link{lmm_animal}} without the
 #' genetic component, and uses the same priors, scaling and outputs.
 #' @param Y Numeric response vector or matrix, with individuals in rows. Every trait must vary: constant traits cannot be standardized and are an error.
-#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. Continuous columns are centered and scaled internally; returned beta draws use original X units.
+#' @param X Finite numeric fixed-effects matrix with the same rows as Y and full column rank. The columns must be able to represent a constant (an intercept column, or the 0/1 indicators of every level of a factor), so that the mean of the response can be reported. Continuous columns are centered and scaled internally; returned beta draws use original X units.
 #' @param lkj_prior Shape parameter of the LKJ prior on the correlation matrix. \code{1} is uniform; values above \code{1} shrink correlations toward zero and values below \code{1} favor larger correlations. The default \code{2} is recommended for many traits, because at high dimensionality the uniform prior concentrates mass near \code{+/-1} and overestimates the magnitude of correlations.
 #' @param iter number of MCMC iterations.
 #' @param warmup number of warmup iterations, must be smaller than iter.
@@ -40,7 +40,8 @@ lmm_multiCov = function(Y, X, lkj_prior = 2, iter = 3000, warmup = floor(iter/2)
                    N = nrow(Y),
                    X = X,
                    Y = Y,
-                   lkj_prior = lkj_prior)
+                   lkj_prior = lkj_prior,
+                   x_mean_weight = YX$x_mean_weight)
   model_code <- .read_animal_model_code(model_file, "phenotypicModel.stan")
 
   if(cmd_stan){

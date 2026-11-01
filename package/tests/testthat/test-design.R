@@ -39,6 +39,15 @@ test_that("animal_design drops incomplete rows and reports the ones kept", {
   expect_equal(attr(d, "individuals"), as.character(c(1, 2, 4, 5, 6, 7, 8)))
 })
 
+test_that("dropping the intercept is only allowed if the design spans a constant", {
+  dd <- dat
+  dd$g <- rep(c("a", "b"), length.out = nrow(dd))
+  d <- animal_design(trait ~ 0 + g, dd)
+  expect_equal(colnames(d$X), c("ga", "gb"))
+  expect_error(animal_design(trait ~ 0 + x, dd), "cannot represent a constant")
+  expect_error(animal_design(trait ~ 0 + x + x2, dd), "cannot represent a constant")
+})
+
 test_that("animal_design dummy codes factors", {
   d <- animal_design(trait ~ factor(sex), dat)
   expect_equal(colnames(d$X), c("(Intercept)", "factor(sex)1"))

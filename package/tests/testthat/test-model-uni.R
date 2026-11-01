@@ -47,3 +47,22 @@ test_that("the E-BFMI warning is raised only for the variance parametrization", 
                     class = "CmdStanMCMC")
   expect_warning(stanAnimal:::.warn_low_bfmi(mock), "parametrization")
 })
+
+test_that("factor indicators instead of an intercept recover group means", {
+  set.seed(63)
+  n <- 300
+  families <- rep(seq_len(60), each = 5)
+  A <- outer(families, families, "==") * 0.5
+  diag(A) <- 1
+  group <- rep(c(0, 1), length.out = n)
+  breeding <- t(chol(A)) %*% stats::rnorm(n, sd = sqrt(0.5))
+  y <- c(10, 14)[group + 1] + breeding + stats::rnorm(n, sd = sqrt(0.5))
+
+  fit <- suppressWarnings(lmm_animal(y, stats::model.matrix(~ 0 + factor(group)), A,
+                                     iter = 800, chains = 2, cores = 2, seed = 1,
+                                     refresh = 0, show_messages = FALSE))
+  estimates <- fit$summary("beta", "mean")$mean
+  # the response is centred inside the model, so without the restored mean these
+  # would come out around -2 and 2
+  expect_lt(max(abs(estimates - c(10, 14))), 1)
+})
