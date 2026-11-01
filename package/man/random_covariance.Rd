@@ -12,7 +12,6 @@ random_covariance(
   max_var = 1,
   method = c("lkj", "partial", "factor"),
   lkj_prior = 2,
-  loadings = NULL,
   integration = NULL,
   trait_names = NULL
 )
@@ -33,17 +32,13 @@ and \code{max_var}.}
 \item{method}{Correlation model. \code{"lkj"} (default) draws a correlation
 matrix from the LKJ distribution with shape \code{lkj_prior};
 \code{"partial"} draws partial correlations uniformly, reproducing
-\code{evolqg::RandomMatrix()}; \code{"factor"} builds a one-factor
-correlation matrix whose first principal component is a size axis.}
+\code{evolqg::RandomMatrix()}; \code{"factor"} combines a positive size
+factor with a sign-oriented random LKJ residual, so PC1 is a size axis and
+draws differ at a fixed integration level.}
 
-\item{lkj_prior}{LKJ shape for \code{method = "lkj"}, a finite number above
-0. The default \code{2} matches the prior of \code{\link{lmm_animal}}.}
-
-\item{loadings}{For \code{method = "factor"}, the positive loadings of the
-size axis, one per trait. The default gives every trait the same loading,
-so PC1 is size in the sense of the mean of the standardized traits. The
-same loadings are used for every matrix, so only the strength of the
-factor changes between draws.}
+\item{lkj_prior}{LKJ shape for \code{method = "lkj"} and for the random
+residual of \code{method = "factor"}, a finite number above 0. The default
+\code{2} matches the prior of \code{\link{lmm_animal}}.}
 
 \item{integration}{For \code{method = "factor"}, the target integration
 level, measured as the relative eigenvalue variance of
@@ -65,7 +60,8 @@ Draws random covariance matrices for simulations: a random correlation
 matrix scaled by a vector of variances. Correlations come from the LKJ
 distribution used as a prior by \code{\link{lmm_animal}}, from the
 partial-correlation construction of \code{evolqg::RandomMatrix()}, or from a
-one-factor model whose first principal component is a positive size axis.
+two-regime model that combines a positive size axis with a sign-oriented
+random LKJ residual.
 }
 \details{
 The variances are independent of the correlations, and the
@@ -94,17 +90,25 @@ The variances are independent of the correlations, and the
   Unlike \code{evolqg::RandomMatrix()}, this function also handles one and
   two traits with \code{method = "partial"}.
 
-  With \code{method = "factor"} the correlation matrix is
-  \eqn{R = \lambda\lambda^T + \mathrm{diag}(1 - \lambda^2)}, with
-  \eqn{\lambda_i = \sqrt{\rho} u_i}, where \eqn{u} is the positive loading
-  pattern scaled to a maximum of 1. The leading eigenvector is positive, so
-  PC1 is a size axis; the same \eqn{u} is used for every matrix, and only
-  \eqn{\rho} changes to reach the requested integration. This is the method
-  to use for size-dominated morphometric simulations: it reaches high
-  integration without the near-singular randomness of the partial method.
-  With equal loadings it is an equicorrelation matrix, whose relative
-  eigenvalue variance is \eqn{\rho^2}, so a target of 0.8 corresponds to
-  correlations of about 0.89.
+  With \code{method = "factor"} the random part is
+  \eqn{R_{res} = (1 - \delta) I + \delta R_{LKJ}}, where \eqn{R_{LKJ}} is a
+  random LKJ correlation whose leading eigenvector has been oriented to be
+  positive and \eqn{\delta = 0.3}. Orienting keeps PC1 positive while leaving
+  the remaining components free to carry negative correlations. For targets
+  below the integration of \eqn{R_{res}}, the matrix is
+  \eqn{(1 - \alpha) I + \alpha R_{res}}, which shrinks the random structure
+  toward independence without flattening it into equicorrelation. For higher
+  targets the matrix is \eqn{\rho 11^T + (1 - \rho) R_{res}}, which adds the
+  equal-loading size factor; at \eqn{\rho = 1} it is all ones, whose relative
+  eigenvalue variance is 1. Both regimes have diagonal 1 and are solved to
+  match the requested integration. Because \eqn{R_{LKJ}} is redrawn for every
+  matrix, draws at a fixed integration differ in their lower components. This
+  is the method to use for size-dominated morphometric simulations: it spans
+  the full integration range while staying far better conditioned than
+  bending an LKJ spectrum directly (at five traits the median condition
+  number is about 4 at 0.1, 16 at 0.5 and 53 at 0.8). At two traits the
+  target fixes the single correlation, so draws at a fixed integration are
+  identical up to the sign orientation.
 }
 \examples{
 set.seed(1)
@@ -116,7 +120,7 @@ eigen(G, symmetric = TRUE, only.values = TRUE)$values
 # Reproduce the evolqg construction
 random_covariance(2, n_matrices = 3, method = "partial")
 
-# A strongly integrated size axis: PC1 dominates and all loadings are positive
+# A strongly integrated size axis: PC1 dominates and is positive
 S <- random_covariance(5, method = "factor", integration = 0.8)
 R <- cov2cor(S)
 round(R, 2)
