@@ -19,7 +19,7 @@ Requires R 4.0.0 or later.
 
 # Quick start with the bundled data
 
-Two datasets from the mouse artificial-selection experiment of [Penna et al. (2017)](https://doi.org/10.1111/evo.13304) ship with the package:
+The package ships the measurements and the pedigree of the mouse artificial-selection experiment of [Penna et al. (2017)](https://doi.org/10.1111/evo.13304):
 
 - `ratones_morpho`: 329 mice with 35 cranial distances plus sex, age, generation and selection line, one row per individual;
 - `ratones_pedigree`: the pedigree of the 525 individuals of the experiment, ancestors included.
@@ -243,7 +243,7 @@ Models fit with cmdstanr are compiled once and the executable is reused in later
 
 # Examples
 
-Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `ratones.R` (real mouse data, the bundled datasets), `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth or with the data and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
+Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `ratones.R` (real mouse data), `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth or with the data and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
 
 ## A complete example
 
