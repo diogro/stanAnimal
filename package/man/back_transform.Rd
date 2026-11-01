@@ -53,9 +53,11 @@ ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
 k <- length(ss$raw_traits)
 names_mat <- function(var) sprintf(paste0(var, "[\%d,\%d]"),
                                    rep(seq_len(k), k), rep(seq_len(k), each = k))
-# a real fit supplies G and E; here they are fixed at the identity
-m <- cbind(matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE),
-           matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE))
+# a real fit supplies G and E; here the same draw is repeated
+G <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+E <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+m <- cbind(matrix(rep(as.vector(G), 4), 4, byrow = TRUE),
+           matrix(rep(as.vector(E), 4), 4, byrow = TRUE))
 colnames(m) <- c(names_mat("G"), names_mat("E"))
 post <- back_transform(m, ss)
 dim(post$G)                    # traits x traits x draws

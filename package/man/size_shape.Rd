@@ -58,10 +58,10 @@ Size is the mean of the traits, \code{rowMeans(Y)}, i.e. the log
   therefore reasonable, and it can also make the model cheaper to sample.
 }
 \examples{
-size_gradient <- rnorm(20)
-Y <- cbind(a = size_gradient + rnorm(20),
-           b = 2 * size_gradient + rnorm(20),
-           c = -size_gradient + rnorm(20))
+set.seed(1)
+G <- random_covariance(3, method = "factor", integration = 0.8)
+Y <- matrix(rnorm(30 * 3), 30, 3) \%*\% chol(G)
+colnames(Y) <- c("a", "b", "c")
 ss <- size_shape(Y)
 head(ss$scores)
 ss$loadings

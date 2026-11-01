@@ -28,12 +28,11 @@ The correlation matrix is used so that traits measured on different
   information and no reparametrization is needed.
 }
 \examples{
-gradient <- rnorm(50)
-correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
-                    b = 2 * gradient + rnorm(50, sd = 0.2),
-                    c = -gradient + rnorm(50, sd = 0.2))
-pc1_variance_share(correlated)                 # close to 1
-pc1_variance_share(matrix(rnorm(150), 50, 3))  # close to 1 / 3
+set.seed(1)
+G <- random_covariance(3, method = "factor", integration = 0.8)
+Y <- matrix(rnorm(200 * 3), 200, 3) \%*\% chol(G)
+pc1_variance_share(Y)                     # high: one dominant size axis
+pc1_variance_share(matrix(rnorm(600), 200, 3))  # close to 1 / 3
 }
 \seealso{
 \code{\link{size_shape}}, \code{\link{animal_design}}

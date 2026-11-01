@@ -32,7 +32,9 @@ n_traits = 5
 traits = paste0("trait", seq_len(n_traits))
 
 set.seed(41)
-(G <- RandomMatrix(n_traits, LKJ = FALSE))
+# random_covariance(method = "partial") is the package port of
+# evolqg::RandomMatrix(LKJ = FALSE), with the one- and two-trait cases fixed.
+(G <- random_covariance(n_traits, method = "partial", trait_names = traits))
 E = diag(n_traits)
 
 n = nrow(A)

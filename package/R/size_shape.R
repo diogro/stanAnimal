@@ -16,12 +16,11 @@
 #'   information and no reparametrization is needed.
 #' @seealso \code{\link{size_shape}}, \code{\link{animal_design}}
 #' @examples
-#' gradient <- rnorm(50)
-#' correlated <- cbind(a = gradient + rnorm(50, sd = 0.2),
-#'                     b = 2 * gradient + rnorm(50, sd = 0.2),
-#'                     c = -gradient + rnorm(50, sd = 0.2))
-#' pc1_variance_share(correlated)                 # close to 1
-#' pc1_variance_share(matrix(rnorm(150), 50, 3))  # close to 1 / 3
+#' set.seed(1)
+#' G <- random_covariance(3, method = "factor", integration = 0.8)
+#' Y <- matrix(rnorm(200 * 3), 200, 3) %*% chol(G)
+#' pc1_variance_share(Y)                     # high: one dominant size axis
+#' pc1_variance_share(matrix(rnorm(600), 200, 3))  # close to 1 / 3
 #' @export
 pc1_variance_share <- function(Y) {
   Y <- as.matrix(Y)
@@ -87,10 +86,10 @@ pc1_variance_share <- function(Y) {
 #'   therefore reasonable, and it can also make the model cheaper to sample.
 #' @seealso \code{\link{back_transform}}, \code{\link{animal_design}}
 #' @examples
-#' size_gradient <- rnorm(20)
-#' Y <- cbind(a = size_gradient + rnorm(20),
-#'            b = 2 * size_gradient + rnorm(20),
-#'            c = -size_gradient + rnorm(20))
+#' set.seed(1)
+#' G <- random_covariance(3, method = "factor", integration = 0.8)
+#' Y <- matrix(rnorm(30 * 3), 30, 3) %*% chol(G)
+#' colnames(Y) <- c("a", "b", "c")
 #' ss <- size_shape(Y)
 #' head(ss$scores)
 #' ss$loadings
@@ -182,9 +181,11 @@ print.size_shape <- function(x, ...) {
 #' k <- length(ss$raw_traits)
 #' names_mat <- function(var) sprintf(paste0(var, "[%d,%d]"),
 #'                                    rep(seq_len(k), k), rep(seq_len(k), each = k))
-#' # a real fit supplies G and E; here they are fixed at the identity
-#' m <- cbind(matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE),
-#'            matrix(rep(as.vector(diag(k)), 4), 4, byrow = TRUE))
+#' # a real fit supplies G and E; here the same draw is repeated
+#' G <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+#' E <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+#' m <- cbind(matrix(rep(as.vector(G), 4), 4, byrow = TRUE),
+#'            matrix(rep(as.vector(E), 4), 4, byrow = TRUE))
 #' colnames(m) <- c(names_mat("G"), names_mat("E"))
 #' post <- back_transform(m, ss)
 #' dim(post$G)                    # traits x traits x draws
@@ -262,8 +263,10 @@ back_transform <- function(fit, transform) {
 #' @examples
 #' ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
 #' k <- length(ss$raw_traits)
-#' m <- cbind(matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE),
-#'            matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE))
+#' G <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+#' E <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+#' m <- cbind(matrix(rep(as.vector(G), 3), 3, byrow = TRUE),
+#'            matrix(rep(as.vector(E), 3), 3, byrow = TRUE))
 #' colnames(m) <- c(sprintf("G[%d,%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)),
 #'                  sprintf("E[%d,%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)))
 #' draws <- to_draws_list(back_transform(m, ss))

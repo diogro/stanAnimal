@@ -37,8 +37,10 @@ Correlations are reported once per pair, for \code{i < j}, because
 \examples{
 ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
 k <- length(ss$raw_traits)
-m <- cbind(matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE),
-           matrix(rep(as.vector(diag(k)), 3), 3, byrow = TRUE))
+G <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+E <- random_covariance(k, min_var = 0.5, max_var = 1.5)
+m <- cbind(matrix(rep(as.vector(G), 3), 3, byrow = TRUE),
+           matrix(rep(as.vector(E), 3), 3, byrow = TRUE))
 colnames(m) <- c(sprintf("G[\%d,\%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)),
                  sprintf("E[\%d,\%d]", rep(seq_len(k), k), rep(seq_len(k), each = k)))
 draws <- to_draws_list(back_transform(m, ss))

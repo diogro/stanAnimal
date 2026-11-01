@@ -51,9 +51,9 @@ for (g in 2:n_gen) {
 }
 A <- makeA(ped)
 
-# Simulated truth from the package's LKJ construction: correlations are shrunk
-# toward zero, so G and E are well conditioned and REML does not sit on the
-# boundary.
+# Simulated truth from random_covariance(): the default LKJ construction shrinks
+# correlations toward zero, so G and E are well conditioned and REML does not
+# sit on the boundary.
 set.seed(4321)
 G <- random_covariance(n_traits, min_var = 0.7, max_var = 1.3,
                        trait_names = traits)

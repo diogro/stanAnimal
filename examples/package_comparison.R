@@ -39,8 +39,13 @@ for (g in 2:n_gen) {
 }
 A <- makeA(ped)
 
-G <- matrix(c(0.8, 0.4, 0.4, 1.2), 2, dimnames = list(c("t1", "t2"), c("t1", "t2")))
-E <- matrix(c(1.0, 0.3, 0.3, 0.9), 2, dimnames = list(c("t1", "t2"), c("t1", "t2")))
+# Simulated truth from random_covariance(): correlations are shrunk toward
+# zero, so G and E are well conditioned and REML does not sit on the boundary.
+set.seed(4321)
+G <- random_covariance(2, min_var = 0.7, max_var = 1.3,
+                       trait_names = c("t1", "t2"))
+E <- random_covariance(2, min_var = 0.7, max_var = 1.3,
+                       trait_names = c("t1", "t2"))
 
 n <- nrow(A)
 X <- cbind(Intercept = 1, sex = rbinom(n, 1, 0.5), age = round(rnorm(n, 3, 0.5), 2))
