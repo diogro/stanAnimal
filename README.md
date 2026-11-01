@@ -17,7 +17,7 @@ pak::pkg_install("diogro/stanAnimal/package")
 
 Requires R 4.0.0 or later.
 
-# Example data
+# Quick start with the bundled data
 
 Two datasets from the mouse artificial-selection experiment of Penna et al. (2017) ship with the package:
 
@@ -54,6 +54,59 @@ fit <- lmm_animal(Y, X, A)
 ```
 
 `Y` can be a vector (univariate) or a matrix (multivariate). `A` must be symmetric and positive definite; if it is only positive semidefinite (duplicated individuals, for example), fit with `blend_A = TRUE`. When `A` and the rows of `Y` are both named, `A` is put in the row order of `Y`; names that disagree are an error. Without names, the rows are assumed to be in the same order and only the dimensions are checked.
+
+## Univariate models
+
+Two parametrizations are available through `parametrization`:
+
+- `"variance"` (default): estimates the genetic and residual standard deviations with half-normal priors and derives h2.
+- `"h2"`: estimates a total standard deviation and h2, with a `beta(beta_prior)` prior on h2. The default `beta_prior = c(1, 1)` is flat on h2.
+
+If the `"variance"` version has chains with low E-BFMI, `lmm_animal()` warns and suggests switching to `parametrization = "h2"`. This tends to happen when the genetic variance is weakly identified, for example with few families.
+
+```r
+fit <- lmm_animal(y, X, A, parametrization = "h2")
+```
+
+## Multivariate model
+
+The multivariate model estimates `G` and the residual covariance `E` directly. Each is a vector of scales times an LKJ-distributed correlation matrix, with half-normal priors on the scales (of the standardized responses). There is no prior on h2; `h2 = diag(G) / diag(P)` is derived.
+
+- `lkj_prior` sets the LKJ shape for both correlation matrices (default 2; 1 is uniform, larger shrinks toward zero correlation). A shape above 1 is deliberately recommended for many traits: at high dimensionality, the uniform prior puts most of its mass near ±1 correlations and overestimates their magnitude, which is a well-known problem when estimating genetic correlations in quantitative genetics.
+- `residual_structure = "unstructured"` (default) fits a full residual covariance. `"diagonal"` assumes independent residuals, which pushes environmental covariance between traits into `G` and inflates heritability, so it is not recommended when estimating `G`.
+- Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and the likelihood only needs the eigenvalues of `A`, which is why a singular `A` works once it is regularized with `blend_A = TRUE`.
+- The per-individual likelihoods are also whitened by the residual Cholesky factor and rotated into a single eigendecomposition of $E^{-1/2}GE^{-1/2}$, so an evaluation costs $O(NK^2 + K^3)$ rather than $O(NK^3)$. The model scales to dozens of traits (e.g. 40) without per-individual Cholesky factorizations. When the eigenvalues of $E^{-1/2}GE^{-1/2}$ are nearly coincident (at initialization, or when `G` is roughly proportional to `E`), the model automatically falls back to a per-individual Cholesky evaluation, whose gradient is well behaved.
+- Fitting many traits is still computationally heavy even though the likelihood is cheap: an unstructured `G` at `K = 40` has roughly 1,700 parameters, and NUTS needs many leapfrog steps, so one fit can take an hour or more. Fewer `iter`, a larger `lkj_prior`, or `residual_structure = "diagonal"` make fits faster.
+- The side that does not scale is the number of individuals. `A` is dense, so the models receive all $N \times N$ of it and each chain eigendecomposes it before sampling: $O(N^3)$ time and $O(N^2)$ memory per chain, about two seconds at 1,000 individuals, half a minute at 2,000 and a minute at 4,000. That is a one-off cost, and afterwards an evaluation is only linear in $N$: with many traits, sampling dominates and the decomposition is a small fraction of the fit (at 4,000 individuals and `K = 3`, about a minute out of ten), while with few traits and short runs it can be most of it (at 4,000 individuals univariate, about 70% of 500 iterations). Either way the package targets many traits on hundreds to a few thousand individuals; for cohorts in the tens of thousands, where the dense relationship matrix is the bottleneck, an engine that works with the sparse inverse of `A` (such as [ASReml](https://asreml.locustware.com/)) is the better tool.
+
+## Output
+
+With the default `cmd_stan = TRUE`, `lmm_animal()` returns a `CmdStanMCMC` object, so the usual cmdstanr, posterior and bayesplot tools work directly:
+
+```r
+fit <- lmm_animal(Y, X, A)          # multivariate, so the fit holds G, E and h2
+fit$summary(c("G", "E", "h2"))
+fit$draws("G", format = "draws_matrix")
+
+bayesplot::mcmc_trace(fit$draws("h2"))
+bayesplot::mcmc_intervals(fit$draws("corrG"))
+bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(fit))
+```
+
+Variables are reported on the **original scale** of the data:
+
+| Model | Variables |
+|---|---|
+| Multivariate | `G`, `E`, `P = G + E`, `corrG`, `h2`, `sigma_G`, `sigma_E`, `beta[trait, j]` |
+| Univariate | `h2`, `sigma_G`, `sigma_E` (standard deviations), `beta[j]` |
+
+Fixed effects are `beta[j]` (univariate) or `beta[trait, j]` for column `j` of `X`. To get draws named after the columns of `X` (for example `beta[2,age]`), use:
+
+```r
+animal_draws(fit, "beta")
+```
+
+With `cmd_stan = FALSE` the fit is a `stanfit` object from `rstan`, with `beta` already named after the columns of `X`.
 
 ## Formula interface
 
@@ -100,69 +153,6 @@ design <- animal_design(cbind(t1, t2) ~ age + sex, dat, genotypes = M, blend = 0
 fit <- lmm_animal(design$Y, design$X, design$A)
 ```
 
-## Pedigree relationship matrix
-
-`makeA()` turns a pedigree into the additive relationship matrix, using the tabular method, with parents allowed in any order and unknown parents coded `0`, `NA` or `""`:
-
-```r
-# first three columns: individual, sire, dam
-A <- makeA(pedigree)
-fit <- lmm_animal(Y, X, A)
-```
-
-Inbreeding is accounted for, so a pedigree with matings between relatives gives diagonal values above one. A parent that is not one of the pedigree's individuals is added as a founder, with a warning, rather than silently dropping the relationship; a pedigree where an individual is its own ancestor is an error.
-
-## Genomic relationship matrix
-
-If you have marker genotypes instead of a pedigree, `genomic_relationship()` builds a VanRaden (2008) GRM to use as `A`:
-
-```r
-# M: individuals in rows, markers in columns, coded 0/1/2 (NA allowed)
-A <- genomic_relationship(M, blend = 0.01)
-fit <- lmm_animal(Y, X, A)
-```
-
-Markers with low minor allele frequency (`maf`), too much missing data (`max_missing`) or no variation are dropped, and missing genotypes are set to their expected value. Known base-population allele frequencies can be passed with `p`. If there are fewer markers than individuals, or duplicated genotypes, the GRM is singular; a small `blend` mixes in the identity to make it positive definite.
-
-## Output
-
-With the default `cmd_stan = TRUE`, `lmm_animal()` returns a `CmdStanMCMC` object, so the usual cmdstanr, posterior and bayesplot tools work directly:
-
-```r
-fit$summary(c("G", "E", "h2"))
-fit$draws("G", format = "draws_matrix")
-
-bayesplot::mcmc_trace(fit$draws("h2"))
-bayesplot::mcmc_intervals(fit$draws("corrG"))
-bayesplot::mcmc_nuts_energy(bayesplot::nuts_params(fit))
-```
-
-Variables are reported on the **original scale** of the data:
-
-| Model | Variables |
-|---|---|
-| Multivariate | `G`, `E`, `P = G + E`, `corrG`, `h2`, `sigma_G`, `sigma_E`, `beta[trait, j]` |
-| Univariate | `h2`, `sigma_G`, `sigma_E` (standard deviations), `beta[j]` |
-
-Fixed effects are `beta[j]` (univariate) or `beta[trait, j]` for column `j` of `X`. To get draws named after the columns of `X` (for example `beta[2,age]`), use:
-
-```r
-animal_draws(fit, "beta")
-```
-
-With `cmd_stan = FALSE` the fit is a `stanfit` object from `rstan`, with `beta` already named after the columns of `X`.
-
-## Multivariate model
-
-The multivariate model estimates `G` and the residual covariance `E` directly. Each is a vector of scales times an LKJ-distributed correlation matrix, with half-normal priors on the scales (of the standardized responses). There is no prior on h2; `h2 = diag(G) / diag(P)` is derived.
-
-- `lkj_prior` sets the LKJ shape for both correlation matrices (default 2; 1 is uniform, larger shrinks toward zero correlation). A shape above 1 is deliberately recommended for many traits: at high dimensionality, the uniform prior puts most of its mass near ±1 correlations and overestimates their magnitude, which is a well-known problem when estimating genetic correlations in quantitative genetics.
-- `residual_structure = "unstructured"` (default) fits a full residual covariance. `"diagonal"` assumes independent residuals, which pushes environmental covariance between traits into `G` and inflates heritability, so it is not recommended when estimating `G`.
-- Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and the likelihood only needs the eigenvalues of `A`, which is why a singular `A` works once it is regularized with `blend_A = TRUE`.
-- The per-individual likelihoods are also whitened by the residual Cholesky factor and rotated into a single eigendecomposition of $E^{-1/2}GE^{-1/2}$, so an evaluation costs $O(NK^2 + K^3)$ rather than $O(NK^3)$. The model scales to dozens of traits (e.g. 40) without per-individual Cholesky factorizations. When the eigenvalues of $E^{-1/2}GE^{-1/2}$ are nearly coincident (at initialization, or when `G` is roughly proportional to `E`), the model automatically falls back to a per-individual Cholesky evaluation, whose gradient is well behaved.
-- Fitting many traits is still computationally heavy even though the likelihood is cheap: an unstructured `G` at `K = 40` has roughly 1,700 parameters, and NUTS needs many leapfrog steps, so one fit can take an hour or more. Fewer `iter`, a larger `lkj_prior`, or `residual_structure = "diagonal"` make fits faster.
-- The side that does not scale is the number of individuals. `A` is dense, so the models receive all $N \times N$ of it and each chain eigendecomposes it before sampling: $O(N^3)$ time and $O(N^2)$ memory per chain, about two seconds at 1,000 individuals, half a minute at 2,000 and a minute at 4,000. That is a one-off cost, and afterwards an evaluation is only linear in $N$: with many traits, sampling dominates and the decomposition is a small fraction of the fit (at 4,000 individuals and `K = 3`, about a minute out of ten), while with few traits and short runs it can be most of it (at 4,000 individuals univariate, about 70% of 500 iterations). Either way the package targets many traits on hundreds to a few thousand individuals; for cohorts in the tens of thousands, where the dense relationship matrix is the bottleneck, an engine that works with the sparse inverse of `A` (such as [ASReml](https://asreml.locustware.com/)) is the better tool.
-
 ## Size and shape reparametrization (use this when one PC dominates)
 
 **If the traits are morphometric and a single principal component explains most of their variance, fit size and shape scores instead of the raw traits.** In that situation the covariance is a long, thin ridge: size and shape are still estimable, but the raw parametrization samples poorly (divergences, low E-BFMI, many leapfrog steps) and the prior is spread over near-degenerate directions.
@@ -199,6 +189,30 @@ The LKJ prior is not invariant under this change of traits: it acts on correlati
 
 Size is `rowMeans(Y)` and the shape axes are the principal components of `Y - size`, so `Y = scores %*% t(loadings)` up to the means and covariance matrices map exactly as $B M B^\top$. Keeping fewer axes (`n_shape`) gives a lower-rank, singular covariance in the original trait space. Heritabilities and genetic correlations are recomputed after the transformation, since neither is invariant under a change of traits; `beta` stays on the model scale. `back_transform()` also accepts a `lmm_multiCov()` fit, in which case it returns `P`, `corrP` and `sigma_P`.
 
+## Pedigree relationship matrix
+
+`makeA()` turns a pedigree into the additive relationship matrix, using the tabular method, with parents allowed in any order and unknown parents coded `0`, `NA` or `""`:
+
+```r
+# first three columns: individual, sire, dam
+A <- makeA(pedigree)
+fit <- lmm_animal(Y, X, A)
+```
+
+Inbreeding is accounted for, so a pedigree with matings between relatives gives diagonal values above one. A parent that is not one of the pedigree's individuals is added as a founder, with a warning, rather than silently dropping the relationship; a pedigree where an individual is its own ancestor is an error.
+
+## Genomic relationship matrix
+
+If you have marker genotypes instead of a pedigree, `genomic_relationship()` builds a VanRaden (2008) GRM to use as `A`:
+
+```r
+# M: individuals in rows, markers in columns, coded 0/1/2 (NA allowed)
+A <- genomic_relationship(M, blend = 0.01)
+fit <- lmm_animal(Y, X, A)
+```
+
+Markers with low minor allele frequency (`maf`), too much missing data (`max_missing`) or no variation are dropped, and missing genotypes are set to their expected value. Known base-population allele frequencies can be passed with `p`. If there are fewer markers than individuals, or duplicated genotypes, the GRM is singular; a small `blend` mixes in the identity to make it positive definite.
+
 ## Phenotypic covariance only (P)
 
 With no pedigree or genomic data, `lmm_multiCov()` estimates just the phenotypic covariance matrix `P`. It takes the same arguments and priors as `lmm_animal()` (without `A`), and returns the same kind of object, with `P`, `corrP`, `sigma_P` and `beta`. The likelihood is a single whitened triangular solve, $O(NK^2 + K^3)$, so it also scales to dozens of traits:
@@ -208,20 +222,7 @@ fit <- lmm_multiCov(Y, X, lkj_prior = 2)
 fit$summary("P")
 ```
 
-## Univariate models
-
-Two parametrizations are available through `parametrization`:
-
-- `"variance"` (default): estimates the genetic and residual standard deviations with half-normal priors and derives h2.
-- `"h2"`: estimates a total standard deviation and h2, with a `beta(beta_prior)` prior on h2. The default `beta_prior = c(1, 1)` is flat on h2.
-
-If the `"variance"` version has chains with low E-BFMI, `lmm_animal()` warns and suggests switching to `parametrization = "h2"`. This tends to happen when the genetic variance is weakly identified, for example with few families.
-
-```r
-fit <- lmm_animal(y, X, A, parametrization = "h2")
-```
-
-## Scaling
+## Data scaling and back-transformed coefficients
 
 All models standardize the response and divide continuous predictors by their standard deviation (constant and 0/1 columns are not scaled) for better sampling. Coefficients are back-transformed, so `beta` is in the original units of `X` and `Y`, and the mean of the response is restored through the design: onto an intercept column, or split across the indicator columns of a factor when the intercept is dropped.
 
@@ -244,7 +245,7 @@ Models fit with cmdstanr are compiled once and the executable is reused in later
 
 Complete runnable scripts are in [`examples/`](examples/): `univariate.R`, `multivariate.R`, `ratones.R` (real mouse data, the bundled datasets), `phenotypic_covariance.R`, `gibbs.R` and `multivariate_power_simulation.R`. They compare the posterior with a simulated truth or with the data and write figures to `examples/figures/`; see [`examples/README.md`](examples/README.md) for what each one covers.
 
-# Example
+## A complete example
 
 ```r
 set.seed(1)
@@ -271,3 +272,5 @@ animal_draws(fit, "beta")
 
 - The models assume one record per individual.
 - Under development: the API may still change.
+
+
