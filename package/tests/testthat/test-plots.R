@@ -120,6 +120,7 @@ test_that("plot_G_ellipses validates the interval and ellipse arguments", {
   expect_error(plot_G_ellipses(d, Y, n_show = 0), "`n_show`")
   expect_error(plot_G_ellipses(d, Y, n_show = -3), "`n_show`")
   expect_error(plot_G_ellipses(d, Y, n_show = "10"), "`n_show`")
+  expect_error(plot_G_ellipses(d, Y, n_show = 1.5), "`n_show`")
   expect_s3_class(plot_G_ellipses(d, Y, level = 0.5, prob = 0.9, n_show = 3),
                   "ggplot")
 })
@@ -137,4 +138,33 @@ test_that("plot_forest validates prob", {
   expect_s3_class(p, "ggplot")
   # the interval reported in the axis label follows prob
   expect_match(p$labels$x, "50%")
+})
+
+test_that("animal_prior_draws rejects invalid shapes and counts", {
+  # the LKJ shape must be a distribution: 0 is not
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = 0), "`lkj_prior`")
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = -1), "`lkj_prior`")
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = NA_real_), "`lkj_prior`")
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = Inf), "`lkj_prior`")
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = c(1, 2)), "`lkj_prior`")
+  expect_error(animal_prior_draws(3, n = 100, lkj_prior = "2"), "`lkj_prior`")
+  # and a valid shape still gives correlations inside (-1, 1)
+  d <- animal_prior_draws(3, n = 200, lkj_prior = 1)
+  cor <- d$value[d$type == "Genetic correlation"]
+  expect_true(all(abs(cor) < 1))
+
+  expect_error(animal_prior_draws(0), "`n_traits`")
+  expect_error(animal_prior_draws(2.5), "`n_traits`")
+  expect_error(animal_prior_draws(2, n = 0), "`n`")
+  expect_error(animal_prior_draws(2, n = 1.5), "`n`")
+  expect_equal(nrow(animal_prior_draws(1, n = 7)), 7)
+})
+
+test_that("the prior plots reject an invalid n_prior", {
+  vars <- c("h2[1]", "h2[2]", "corrG[1,2]", "corrG[2,1]")
+  fit <- posterior::as_draws_array(array(
+    stats::runif(50 * 1 * 4), c(50, 1, 4), dimnames = list(NULL, NULL, vars)))
+  expect_error(plot_prior_posterior(fit, n_prior = 1.5), "`n_prior`")
+  expect_error(plot_forest(fit, n_prior = 0), "`n_prior`")
+  expect_error(plot_forest(fit, n_prior = 100, lkj_prior = 0), "`lkj_prior`")
 })

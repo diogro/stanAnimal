@@ -56,7 +56,15 @@
 * `plot_forest()` now checks `prob` and `plot_G_ellipses()` checks `prob`,
   `level` and `n_show`, so a level of 2 or a negative number of draws is a
   message naming the argument instead of a failure inside the interval or
-  ellipse calculation.
+  ellipse calculation. `n_show` must also be a whole number: it used to be
+  truncated, so `n_show = 1.5` silently drew one ellipse.
+
+* `animal_prior_draws()` now validates `lkj_prior`, `n_traits` and `n`. A shape
+  of 0 returned correlations of exactly +/-1 (and a negative or non-finite
+  shape returned `NaN`s with a warning), while a fractional `n_traits` or `n`
+  was silently truncated and `0` failed with an unrelated error inside
+  `matrix()`. `lmm_animal()` and `lmm_multiCov()` reject an invalid `lkj_prior`
+  too, instead of losing every chain inside Stan.
 
 * The `control` list now reaches both engines. With `cmdstanr`, only
   `adapt_delta` and `max_treedepth` were forwarded and every other entry was

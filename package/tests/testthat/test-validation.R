@@ -85,3 +85,11 @@ test_that("all shipped Stan files are discoverable", {
               "animalModelUniH2.stan", "phenotypicModel.stan"))
     expect_true(nzchar(stanAnimal:::.read_animal_model_code(NULL, f)))
 })
+
+test_that("an invalid LKJ shape is rejected before Stan runs", {
+  expect_error(lmm_animal(Y, X, A, lkj_prior = 0), "`lkj_prior`")
+  expect_error(lmm_animal(Y, X, A, lkj_prior = -1), "`lkj_prior`")
+  expect_error(lmm_animal(Y, X, A, lkj_prior = c(1, 2)), "`lkj_prior`")
+  expect_error(lmm_multiCov(Y, X, lkj_prior = 0), "`lkj_prior`")
+  expect_error(lmm_multiCov(Y, X, lkj_prior = NA_real_), "`lkj_prior`")
+})

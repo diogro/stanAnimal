@@ -4,9 +4,11 @@
 #' residual covariance matrices and summarises them as heritabilities and
 #' genetic correlations, which do not depend on the scale of the data.
 #'
-#' @param n_traits Number of traits.
-#' @param n Number of prior draws.
-#' @param lkj_prior LKJ shape used in the fit.
+#' @param n_traits Number of traits, a whole number of at least 1.
+#' @param n Number of prior draws, a whole number of at least 1.
+#' @param lkj_prior LKJ shape used in the fit, a finite number above 0. Shapes
+#'   below 1 put mass on correlations near +/-1, and a shape of 0 or less is not
+#'   a distribution.
 #' @param trait_names Optional trait names.
 #' @return A long data frame with columns \code{type} (\code{"Heritability"} or
 #'   \code{"Genetic correlation"}), \code{parameter} and \code{value}.
@@ -23,6 +25,9 @@
 #' @export
 animal_prior_draws <- function(n_traits, n = 4000, lkj_prior = 2,
                                trait_names = NULL) {
+  n_traits <- .check_count(n_traits, "n_traits")
+  n <- .check_count(n, "n")
+  lkj_prior <- .check_positive(lkj_prior, "lkj_prior")
   trait_names <- .trait_names(trait_names, n_traits)
   h2 <- matrix(NA_real_, n, n_traits, dimnames = list(NULL, trait_names))
   pairs <- .trait_pairs(trait_names)
@@ -127,6 +132,7 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
                         line = c(Posterior = "firebrick", Prior = "grey40"))
 
 .prior_posterior <- function(fit, trait_names, lkj_prior, n_prior, prior) {
+  n_prior <- .check_count(n_prior, "n_prior")
   post <- animal_parameter_draws(fit, trait_names)
   if (is.null(prior)) {
     k <- length(unique(post$parameter[post$type == "Heritability"]))
@@ -139,18 +145,6 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
   d$type <- factor(d$type, levels = c("Heritability", "Genetic correlation"))
   d$parameter <- factor(d$parameter, levels = unique(post$parameter))
   d[order(d$type), ]
-}
-
-.check_prob <- function(x, arg) {
-  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0 || x >= 1)
-    stop("`", arg, "` must be one number strictly between 0 and 1.", call. = FALSE)
-  as.numeric(x)
-}
-
-.check_n_show <- function(n_show) {
-  if (!is.numeric(n_show) || length(n_show) != 1L || !is.finite(n_show) || n_show < 1)
-    stop("`n_show` must be a single number of draws, at least 1.", call. = FALSE)
-  as.integer(n_show)
 }
 
 .trait_names <- function(trait_names, k) {
@@ -244,7 +238,7 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 #' @export
 plot_G_ellipses <- function(fit, Y, trait_names = NULL, n_show = 100,
                             level = 0.95, prob = 0.95, X = NULL) {
-  n_show <- .check_n_show(n_show)
+  n_show <- .check_count(n_show, "n_show")
   level <- .check_prob(level, "level")
   prob <- .check_prob(prob, "prob")
   Y <- as.matrix(Y)

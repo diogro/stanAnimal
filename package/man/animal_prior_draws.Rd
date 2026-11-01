@@ -7,11 +7,13 @@
 animal_prior_draws(n_traits, n = 4000, lkj_prior = 2, trait_names = NULL)
 }
 \arguments{
-\item{n_traits}{Number of traits.}
+\item{n_traits}{Number of traits, a whole number of at least 1.}
 
-\item{n}{Number of prior draws.}
+\item{n}{Number of prior draws, a whole number of at least 1.}
 
-\item{lkj_prior}{LKJ shape used in the fit.}
+\item{lkj_prior}{LKJ shape used in the fit, a finite number above 0. Shapes
+below 1 put mass on correlations near +/-1, and a shape of 0 or less is not
+a distribution.}
 
 \item{trait_names}{Optional trait names.}
 }
