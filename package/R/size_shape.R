@@ -175,7 +175,8 @@ print.size_shape <- function(x, ...) {
 #'   \code{apply(post$G, c(1, 2), mean)} is the posterior mean of \code{G} on
 #'   the trait scale, and \code{apply(post$corrG, c(1, 2), quantile, 0.05)} its
 #'   5\% quantile.
-#' @seealso \code{\link{size_shape}}, \code{\link{animal_draws}}
+#' @seealso \code{\link{size_shape}}, \code{\link{animal_draws}},
+#'   \code{\link{to_draws_list}}
 #' @examples
 #' ss <- size_shape(cbind(a = rnorm(20), b = rnorm(20), c = rnorm(20)))
 #' k <- length(ss$raw_traits)

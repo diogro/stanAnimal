@@ -15,6 +15,8 @@ install.packages("posterior", repos = c("https://mc-stan.org/r-packages/", getOp
 pak::pkg_install("diogro/stanAnimal/package")
 ```
 
+Requires R 4.0.0 or later. Building `A` from a pedigree (below) also needs `nadiv`, which is not installed automatically.
+
 # Example data
 
 Two datasets from the mouse artificial-selection experiment of Penna et al. (2017) ship with the package:
@@ -143,7 +145,7 @@ The multivariate model estimates `G` and the residual covariance `E` directly. E
 
 - `lkj_prior` sets the LKJ shape for both correlation matrices (default 2; 1 is uniform, larger shrinks toward zero correlation). A shape above 1 is deliberately recommended for many traits: at high dimensionality, the uniform prior puts most of its mass near ±1 correlations and overestimates their magnitude, which is a well-known problem when estimating genetic correlations in quantitative genetics.
 - `residual_structure = "unstructured"` (default) fits a full residual covariance. `"diagonal"` assumes independent residuals, which pushes environmental covariance between traits into `G` and inflates heritability, so it is not recommended when estimating `G`.
-- Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and it only requires `A` to be positive semidefinite.
+- Breeding values are marginalized using the eigendecomposition of `A`, so the model has no per-individual random effects. This is much faster and better mixing than sampling breeding values, and the likelihood only needs the eigenvalues of `A`, which is why a singular `A` works once it is regularized with `blend_A = TRUE`.
 - The per-individual likelihoods are also whitened by the residual Cholesky factor and rotated into a single eigendecomposition of $E^{-1/2}GE^{-1/2}$, so an evaluation costs $O(NK^2 + K^3)$ rather than $O(NK^3)$. The model scales to dozens of traits (e.g. 40) without per-individual Cholesky factorizations. When the eigenvalues of $E^{-1/2}GE^{-1/2}$ are nearly coincident (at initialization, or when `G` is roughly proportional to `E`), the model automatically falls back to a per-individual Cholesky evaluation, whose gradient is well behaved.
 - Fitting many traits is still computationally heavy even though the likelihood is cheap: an unstructured `G` at `K = 40` has roughly 1,700 parameters, and NUTS needs many leapfrog steps, so one fit can take an hour or more. Fewer `iter`, a larger `lkj_prior`, or `residual_structure = "diagonal"` make fits faster.
 
@@ -174,6 +176,8 @@ post <- back_transform(fit, ss)               # G, E, P, corrG, corrP and h2 on 
 apply(post$G, c(1, 2), mean)                  # posterior mean G
 apply(post$h2, 1, mean)                       # posterior mean h2 per trait
 ```
+
+`to_draws_list()` reshapes that same object into one `posterior` draws matrix per quantity, for when you want the `posterior` or `bayesplot` tools on the back-transformed draws.
 
 `animal_design()` warns automatically when the response has three or more traits and its first principal component explains 80% or more of the variance.
 

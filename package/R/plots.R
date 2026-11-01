@@ -195,15 +195,16 @@ plot_forest <- function(fit, trait_names = NULL, lkj_prior = 2,
 
 #' Pairs plot of the data with posterior draws of G ellipses
 #'
-#' For each pair of traits, the lower triangle shows the data with the
-#' \code{level} ellipses of a sample of posterior G draws (thin lines), the
-#' posterior mean G (thick line) and the observed phenotypic covariance
-#' (dashed), all centred on the data mean. The upper triangle reports the
-#' posterior mean genetic correlation and its HPD interval.
+#' For each pair of traits, the lower triangle shows the data -- or their
+#' residuals when \code{X} is given -- with the \code{level} ellipses of a
+#' sample of posterior G draws (thin lines), the posterior mean G (thick line)
+#' and the covariance of those points (dashed), all centred on their mean. The
+#' upper triangle reports the posterior mean genetic correlation and its HPD
+#' interval.
 #'
 #' @param fit A multivariate fit from \code{lmm_animal} (\code{cmd_stan = TRUE})
-#'   or a \code{posterior} draws object containing \code{G}, \code{corrG}
-#'   and, when \code{X} is given, the fixed effects \code{beta}.
+#'   or a \code{posterior} draws object containing \code{G} and, when
+#'   \code{X} is given, the fixed effects \code{beta}.
 #' @param Y Matrix of the observed traits (the \code{Y} given to the fit).
 #' @param trait_names Optional trait names; default are the column names of
 #'   \code{Y}.
