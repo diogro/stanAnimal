@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="package/man/figures/logo.png" width="200" alt="stanimal logo: a lamb with a halo inside a hexagon">
+</p>
+
 # stanimal
 
 Bayesian animal models in Stan, with a focus on estimating the **additive genetic covariance matrix (G)** of one or more traits from a known relationship matrix. The intended niche is many traits measured on a moderate number of individuals: the cost that grows with the number of traits is the likelihood, and the one that grows with the number of individuals is the dense relationship matrix (see the cost notes under [Multivariate model](#multivariate-model)).
